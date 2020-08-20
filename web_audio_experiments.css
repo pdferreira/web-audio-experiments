@@ -1,0 +1,41 @@
+.control-panel {
+    display: inline-block;
+    vertical-align: top;
+    border: 1px gray solid;
+    padding: 5px;
+    margin: 0;
+}
+
+.control-panel-title {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.control-panel label {
+    margin-right: 5px;
+}
+
+.control-panel input {
+    vertical-align: text-top;
+}
+
+.control-panel input[type=number] {
+    width: max-content;
+}
+
+.control-panel > div:not(.control-panel-title) {
+    margin-top: 5px;
+}
+
+.hidden {
+    display: none;
+}
+
+canvas#frequencyBarCanvas:hover:not(:active) {
+    cursor: grab;
+}
+
+canvas#frequencyBarCanvas:active {
+    cursor: grabbing;
+}
