@@ -259,7 +259,7 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 			const maxDataVisibleInCanvas = Math.round(canvasElem.width / (this.barUnitWidth + this.barUnitSpacingWidth));
 			var x = this.startX;
 			var prevFrequency = 1;
-			var barHeight, y;
+			var barHeight, y, lastLabelEndX;
 
 			for (var i = 0; i < this.data.length; i++) {
 				barHeight = this.data[i] / 2;
@@ -284,16 +284,18 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 				this.canvasCtx.fillRect(x, y, barWidth, barHeight);
 				
 				if (this.options.drawLabels) {
-					const shouldDrawLabel = this.options.logScale ?
-						// if it's the first or its magnitude (exponent) is higher than the previous
-						i == 0 || Math.floor(Math.log2(frequency)) > Math.floor(Math.log2(prevFrequency)) :
-						// otherwise, if dividing the canvas in 16 equal sections, it is the start of a section
-						i * 16 / maxDataVisibleInCanvas % 1 == 0;
-					
-					if (shouldDrawLabel) {
+					const label = Math.round(frequency) + 'Hz';
+					const labelWidth = this.canvasCtx.measureText(label).width;
+					const labelCenterX = x + barWidth / 2;
+					const labelStartX = labelCenterX - labelWidth / 2;
+
+					if (lastLabelEndX === undefined || labelStartX - lastLabelEndX >= 20) {
+						lastLabelEndX = labelStartX + labelWidth;
+
 						this.canvasCtx.fillStyle = 'white';
 						this.canvasCtx.textAlign = 'center';
-						this.canvasCtx.fillText(Math.round(frequency) + 'Hz', x + barWidth / 2, y - 20);
+						this.canvasCtx.fillText(label, labelCenterX, y - 20);
+
 					}
 				}
 				
