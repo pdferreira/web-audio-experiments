@@ -7,10 +7,6 @@ const track = audioContext.createMediaElementSource(audioElem);
 
 const playButton = document.getElementById('playBtn');
 
-audioElem.addEventListener('ended', () => {
-    playButton.dataset.playing = 'false';
-}, false);
-
 const gainNodeL = audioContext.createGain();
 const gainNodeR = audioContext.createGain();
 const volumeControlL = document.getElementById('volumeL');
@@ -389,6 +385,15 @@ fftSizeElem.addEventListener('change', function() {
 	this.value = analyserNode.fftSize;
 });
 
+const onAudioStopped = () => {
+	playButton.dataset.playing = 'false';
+	playButton.innerHTML = 'Play';
+
+	charts.forEach(chart => chart.stop());
+		
+	pannerNode.disconnect(analyserNode);
+};
+
 playButton.addEventListener('click', function () {
 	if (audioContext.state == 'suspended') {
 		audioContext.resume();
@@ -405,15 +410,12 @@ playButton.addEventListener('click', function () {
 		playButton.innerHTML = 'Pause';
 	} else if (this.dataset.playing === 'true') {
 		audioElem.pause();
-		this.dataset.playing = 'false';
-		
-		charts.forEach(chart => chart.stop());
-		
-		pannerNode.disconnect(analyserNode);
-		
-		playButton.innerHTML = 'Play';
+		onAudioStopped();
 	}
 }, false);
+
+
+audioElem.addEventListener('ended', onAudioStopped);
 
 const freqChartScaleElems = document.getElementsByName('freqChartScale');
 for (const elem of freqChartScaleElems) {
