@@ -193,6 +193,7 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 		barUnitSpacingWidth: undefined,
 		options: {
 			drawLabels: true,
+			drawChromaticScale: false,
 			clearCanvas: true,
 			logScale: false
 		},
@@ -249,10 +250,57 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 			}
 			
 			analyserNode.getByteFrequencyData(this.data);
-			
+
 			if (this.options.clearCanvas) {
-				this.canvasCtx.fillStyle = 'rgb(0, 0, 0)';
+				this.canvasCtx.fillStyle = 'black';
 				this.canvasCtx.fillRect(0, 0, canvasElem.width, canvasElem.height);
+			}
+
+			const chromaticScale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+			if (this.options.drawChromaticScale && this.options.logScale) {
+				const noteWidth = this.barUnitWidth + this.barUnitSpacingWidth;
+				const noteSectionWidth = chromaticScale.length * noteWidth;
+				const labelMargin = 5;
+
+				var frequency = 16.35; // start in C_0 note frequency, which is 16.35 Hz
+				var x = this.startX + Math.log2(frequency) * noteSectionWidth;
+				var evenIteration = true;
+
+				while (x < canvasElem.width) {
+					// fill section background in a even/odd pattern
+					this.canvasCtx.fillStyle = evenIteration ? '#222222' : 'black';
+					this.canvasCtx.fillRect(x, 0, noteSectionWidth, canvasElem.height);
+					
+					// divide the section in sub-sections for each note
+					chromaticScale.forEach((note, idx) => {
+						const noteX = x + idx * noteWidth;
+						const noteMaxX = noteX + noteWidth - 1;
+						const startY = 30;
+
+						this.canvasCtx.strokeStyle = 'gray';
+						this.canvasCtx.beginPath();
+						this.canvasCtx.moveTo(noteMaxX, startY);
+						this.canvasCtx.lineTo(noteMaxX, canvasElem.height);
+						this.canvasCtx.stroke();
+
+						this.canvasCtx.fillStyle = 'gray';
+						this.canvasCtx.textAlign = 'center';
+						this.canvasCtx.fillText(note, noteX + noteWidth / 2, startY);
+					});
+
+					// draw frequency label on top of the section
+					if (this.options.drawLabels) {
+						this.canvasCtx.fillStyle = 'white';
+						this.canvasCtx.textAlign = 'left';
+						this.canvasCtx.textBaseline = 'top';
+						this.canvasCtx.fillText(frequency + ' Hz', x + labelMargin, labelMargin);
+					}
+
+					x += noteSectionWidth;
+					frequency *= 2;
+					evenIteration = !evenIteration;
+				}
 			}
 			
 			const maxFrequency = analyserNode.context.sampleRate / 2;
@@ -270,9 +318,9 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 				var barSpacingWidth = this.barUnitSpacingWidth;
 
 				if (this.options.logScale) {
-					const exponentScalingFactor = 12 * (Math.log2(frequency) - Math.log2(prevFrequency));
+					const exponentScalingFactor = chromaticScale.length * (Math.log2(frequency) - Math.log2(prevFrequency));
 					barWidth = this.barUnitWidth * exponentScalingFactor;
-					barSpacingWidth = this.barUnitSpacingWidth * Math.min(1, exponentScalingFactor);
+					barSpacingWidth = this.barUnitSpacingWidth * exponentScalingFactor;
 				}
 
 				if (x >= canvasElem.width) {
@@ -372,7 +420,10 @@ for (const elem of freqChartScaleElems) {
 	elem.addEventListener('input', function () {
 		if (this.checked) {
 			const useLogScale = this.value === 'log';
+
 			frequencyBarChart.options.logScale = useLogScale;
+			frequencyBarChart.options.drawChromaticScale = useLogScale;
+			
 			originalFreqBarChart.options.logScale = useLogScale;
 		}
 	});
