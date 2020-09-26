@@ -92,6 +92,16 @@ const translateToSolfegeNotation = function (spnNoteName) {
 	return spnToSolfegeNotation[spnNoteName[0]] + spnNoteName.substring(1);
 };
 
+const numberToSubscript = function (number) {
+	const numberText = number.toString();
+	var result = "";
+	for (var i = 0; i < numberText.length; i++) {
+		const digitCharCode = numberText.charCodeAt(i);
+		result += String.fromCharCode(digitCharCode + 8272);
+	}
+	return result;
+}
+
 const maxDrawSamplesElem = document.getElementById('maxDrawSamples');
 const maxDrawLinesElem = document.getElementById('maxDrawLines');
 
@@ -275,6 +285,7 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 				const noteSectionWidth = chromaticScale.length * noteWidth;
 				const labelMargin = 5;
 
+				var octavePos = 0;
 				var frequency = 16.35; // start in C_0 note frequency, which is 16.35 Hz
 				var x = this.startX + Math.log2(frequency) * noteSectionWidth - noteWidth / 2;
 				var evenIteration = true;
@@ -299,7 +310,7 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 						const noteName = this.options.useSolfegeNotation ? translateToSolfegeNotation(note) : note;
 						this.canvasCtx.fillStyle = 'gray';
 						this.canvasCtx.textAlign = 'center';
-						this.canvasCtx.fillText(noteName, noteX + noteWidth / 2, startY);
+						this.canvasCtx.fillText(noteName + numberToSubscript(octavePos), noteX + noteWidth / 2, startY);
 					});
 
 					// draw frequency label on top of the section
@@ -312,6 +323,7 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 
 					x += noteSectionWidth;
 					frequency *= 2;
+					octavePos++;
 					evenIteration = !evenIteration;
 				}
 			}
