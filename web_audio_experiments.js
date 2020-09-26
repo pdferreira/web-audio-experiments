@@ -77,6 +77,21 @@ const fftSizeElem = document.getElementById('fftSize');
 analyserNode.fftSize = parseInt(fftSizeElem.value);
 originalAnalyserNode.fftSize = analyserNode.fftSize;
 
+
+const englishToPortugueseNotes = {
+	'C': 'Dó',
+	'D': 'Ré',
+	'E': 'Mi',
+	'F': 'Fá',
+	'G': 'Sol',
+	'A': 'Lá',
+	'B': 'Si'
+};
+
+const translateNoteToPortuguese = function (englishNoteName) {
+	return englishToPortugueseNotes[englishNoteName[0]] + englishNoteName.substring(1);
+};
+
 const maxDrawSamplesElem = document.getElementById('maxDrawSamples');
 const maxDrawLinesElem = document.getElementById('maxDrawLines');
 
@@ -190,6 +205,7 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 		options: {
 			drawLabels: true,
 			drawChromaticScale: false,
+			notesInPortuguese: false,
 			clearCanvas: true,
 			logScale: false
 		},
@@ -280,9 +296,10 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 						this.canvasCtx.lineTo(noteMaxX, canvasElem.height);
 						this.canvasCtx.stroke();
 
+						const noteName = this.options.notesInPortuguese ? translateNoteToPortuguese(note) : note;
 						this.canvasCtx.fillStyle = 'gray';
 						this.canvasCtx.textAlign = 'center';
-						this.canvasCtx.fillText(note, noteX + noteWidth / 2, startY);
+						this.canvasCtx.fillText(noteName, noteX + noteWidth / 2, startY);
 					});
 
 					// draw frequency label on top of the section
