@@ -175,9 +175,9 @@ const WaveformChart = function (canvasElem, analyserNode) {
 				this.y = (this.drawSpanY * this.height/ this.maxDrawSpanY) + v * (this.height / this.maxDrawSpanY) / 2;
 
 				if (i === 0 && this.drawSpanX == 0) {
-				this.canvasCtx.moveTo(x, this.y);
+					this.canvasCtx.moveTo(x, this.y);
 				} else {
-				this.canvasCtx.lineTo(x, this.y);
+					this.canvasCtx.lineTo(x, this.y);
 				}
 
 				x += sliceWidth;
