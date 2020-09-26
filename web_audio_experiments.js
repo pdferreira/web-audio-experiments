@@ -77,8 +77,8 @@ const fftSizeElem = document.getElementById('fftSize');
 analyserNode.fftSize = parseInt(fftSizeElem.value);
 originalAnalyserNode.fftSize = analyserNode.fftSize;
 
-
-const englishToPortugueseNotes = {
+// SPN = Scientific Pitch Notation
+const spnToSolfegeNotation = {
 	'C': 'Dó',
 	'D': 'Ré',
 	'E': 'Mi',
@@ -88,8 +88,8 @@ const englishToPortugueseNotes = {
 	'B': 'Si'
 };
 
-const translateNoteToPortuguese = function (englishNoteName) {
-	return englishToPortugueseNotes[englishNoteName[0]] + englishNoteName.substring(1);
+const translateToSolfegeNotation = function (spnNoteName) {
+	return spnToSolfegeNotation[spnNoteName[0]] + spnNoteName.substring(1);
 };
 
 const maxDrawSamplesElem = document.getElementById('maxDrawSamples');
@@ -205,7 +205,7 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 		options: {
 			drawLabels: true,
 			drawChromaticScale: false,
-			notesInPortuguese: false,
+			useSolfegeNotation: false,
 			clearCanvas: true,
 			logScale: false
 		},
@@ -296,7 +296,7 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 						this.canvasCtx.lineTo(noteMaxX, canvasElem.height);
 						this.canvasCtx.stroke();
 
-						const noteName = this.options.notesInPortuguese ? translateNoteToPortuguese(note) : note;
+						const noteName = this.options.useSolfegeNotation ? translateToSolfegeNotation(note) : note;
 						this.canvasCtx.fillStyle = 'gray';
 						this.canvasCtx.textAlign = 'center';
 						this.canvasCtx.fillText(noteName, noteX + noteWidth / 2, startY);
