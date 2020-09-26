@@ -260,7 +260,7 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 				const labelMargin = 5;
 
 				var frequency = 16.35; // start in C_0 note frequency, which is 16.35 Hz
-				var x = this.startX + Math.log2(frequency) * noteSectionWidth;
+				var x = this.startX + Math.log2(frequency) * noteSectionWidth - noteWidth / 2;
 				var evenIteration = true;
 
 				while (x < canvasElem.width) {
