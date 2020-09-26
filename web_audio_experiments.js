@@ -454,8 +454,10 @@ for (const elem of freqChartScaleElems) {
 
 			frequencyBarChart.options.logScale = useLogScale;
 			frequencyBarChart.options.drawChromaticScale = useLogScale;
-			
+			frequencyBarChart.scaleX = useLogScale ? Math.pow(2, -7) : 1; // useful default
+
 			originalFreqBarChart.options.logScale = useLogScale;
+			originalFreqBarChart.scaleX = frequencyBarChart.scaleX;
 		}
 	});
 	elem.dispatchEvent(new Event('input'));
