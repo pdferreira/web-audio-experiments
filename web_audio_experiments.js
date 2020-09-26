@@ -79,12 +79,12 @@ originalAnalyserNode.fftSize = analyserNode.fftSize;
 
 // SPN = Scientific Pitch Notation
 const spnToSolfegeNotation = {
-	'C': 'Dó',
-	'D': 'Ré',
+	'C': 'Do',
+	'D': 'Re',
 	'E': 'Mi',
-	'F': 'Fá',
+	'F': 'Fa',
 	'G': 'Sol',
-	'A': 'Lá',
+	'A': 'La',
 	'B': 'Si'
 };
 
