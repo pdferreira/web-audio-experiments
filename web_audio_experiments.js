@@ -334,7 +334,7 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 						this.canvasCtx.fillStyle = 'white';
 						this.canvasCtx.textAlign = 'left';
 						this.canvasCtx.textBaseline = 'top';
-						this.canvasCtx.fillText(frequency + ' Hz', x + labelMargin, labelMargin);
+						fillTextIfFits(this.canvasCtx, frequency + ' Hz', x + labelMargin, labelMargin, noteSectionWidth - labelMargin * 2);
 					}
 
 					x += noteSectionWidth;
@@ -348,26 +348,39 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 			const maxDataVisibleInCanvas = Math.round(canvasElem.width / (this.barUnitWidth + this.barUnitSpacingWidth));
 			var x = this.startX;
 			var prevFrequency = 1;
-			var barHeight, y, lastLabelEndX;
+			var accData = new Array();
+			var lastLabelEndX;
 
 			for (var i = 0; i < this.data.length; i++) {
-				barHeight = this.data[i] / 2;
-				y = this.height - barHeight;
+				accData.push(this.data[i]);
 
 				const frequency = maxFrequency * (i + 1) / this.data.length;
-				var barWidth = this.barUnitWidth;
-				var barSpacingWidth = this.barUnitSpacingWidth;
+				var barWidth, barSpacingWidth;
 
 				if (this.options.logScale) {
 					const exponentScalingFactor = chromaticScale.length * (Math.log2(frequency) - Math.log2(prevFrequency));
 					barWidth = this.barUnitWidth * exponentScalingFactor;
 					barSpacingWidth = this.barUnitSpacingWidth * exponentScalingFactor;
+				} else {
+					barWidth = this.barUnitWidth * accData.length;
+					barSpacingWidth = this.barUnitSpacingWidth;
 				}
 
 				if (x >= canvasElem.width) {
 					// no longer visible inside canvas, no use in drawing
 					break;
 				}
+
+				// draw the bar if the accumulated width is meaningful
+				// otherwise just accumulate and perform the average later
+				// (better performance and also less cluttered visual)		
+				if (barWidth < 0.5) {
+					continue;
+				}
+				
+				const avgAccData = accData.reduce((sum, v) => sum + v) / accData.length;
+				const barHeight = avgAccData / 2;
+				const y = this.height - barHeight;
 
 				this.canvasCtx.fillStyle = this.barFillStyle(i);
 				this.canvasCtx.fillRect(x, y, barWidth, barHeight);
@@ -390,6 +403,7 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 				
 				x += barWidth + barSpacingWidth;
 				prevFrequency = frequency;
+				accData = new Array();
 			}
 		}
 	};
