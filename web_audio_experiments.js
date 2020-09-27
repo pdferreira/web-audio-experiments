@@ -102,6 +102,17 @@ const numberToSubscript = function (number) {
 	return result;
 }
 
+const checkIfTextFits = function (ctx, text, maxAllowedWidth) {
+	const textWidth = ctx.measureText(text).width;
+	return textWidth <= maxAllowedWidth;
+};
+
+const fillTextIfFits = function (ctx, text, x, y, maxAllowedWidth) {
+	if (checkIfTextFits(ctx, text, maxAllowedWidth)) {
+		ctx.fillText(text, x, y);
+	}
+};
+
 const maxDrawSamplesElem = document.getElementById('maxDrawSamples');
 const maxDrawLinesElem = document.getElementById('maxDrawLines');
 
@@ -284,6 +295,7 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 				const noteWidth = this.barUnitWidth + this.barUnitSpacingWidth;
 				const noteSectionWidth = chromaticScale.length * noteWidth;
 				const labelMargin = 5;
+				const maxNoteTextWidth = noteWidth - 2;
 
 				var octavePos = 0;
 				var frequency = 16.35; // start in C_0 note frequency, which is 16.35 Hz
@@ -295,23 +307,27 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 					this.canvasCtx.fillStyle = evenIteration ? '#222222' : 'black';
 					this.canvasCtx.fillRect(x, 0, noteSectionWidth, canvasElem.height);
 					
-					// divide the section in sub-sections for each note
-					chromaticScale.forEach((note, idx) => {
-						const noteX = x + idx * noteWidth;
-						const noteMaxX = noteX + noteWidth - 1;
-						const startY = 30;
+					// divide the section in sub-sections for each note (if readable at all)
+					const octaveText = numberToSubscript(octavePos);
+					const sampleNote = 'C' + octaveText;
+					if (checkIfTextFits(this.canvasCtx, sampleNote, maxNoteTextWidth)) {
+						chromaticScale.forEach((note, idx) => {
+							const noteX = x + idx * noteWidth;
+							const noteMaxX = noteX + noteWidth - 1;
+							const startY = 30;
 
-						this.canvasCtx.strokeStyle = 'gray';
-						this.canvasCtx.beginPath();
-						this.canvasCtx.moveTo(noteMaxX, startY);
-						this.canvasCtx.lineTo(noteMaxX, canvasElem.height);
-						this.canvasCtx.stroke();
-
-						const noteName = this.options.useSolfegeNotation ? translateToSolfegeNotation(note) : note;
-						this.canvasCtx.fillStyle = 'gray';
-						this.canvasCtx.textAlign = 'center';
-						this.canvasCtx.fillText(noteName + numberToSubscript(octavePos), noteX + noteWidth / 2, startY);
-					});
+							this.canvasCtx.strokeStyle = 'gray';
+							this.canvasCtx.beginPath();
+							this.canvasCtx.moveTo(noteMaxX, startY);
+							this.canvasCtx.lineTo(noteMaxX, canvasElem.height);
+							this.canvasCtx.stroke();
+							
+							const noteName = this.options.useSolfegeNotation ? translateToSolfegeNotation(note) : note;
+							this.canvasCtx.fillStyle = 'gray';
+							this.canvasCtx.textAlign = 'center';
+							fillTextIfFits(this.canvasCtx, noteName + octaveText, noteX + noteWidth / 2 - 1, startY, maxNoteTextWidth);
+						});
+					}
 
 					// draw frequency label on top of the section
 					if (this.options.drawLabels) {
