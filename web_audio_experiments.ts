@@ -12,12 +12,12 @@ const gainNodeR = audioContext.createGain();
 const volumeControlL = document.getElementById('volumeL') as HTMLInputElement;
 const volumeControlR = document.getElementById('volumeR') as HTMLInputElement;
 
-gainNodeL.gain.value = parseInt(volumeControlL.value);
+gainNodeL.gain.value = parseFloat(volumeControlL.value);
 volumeControlL.addEventListener('input', function() {
     gainNodeL.gain.value = parseFloat(this.value);
 }, false);
 
-gainNodeR.gain.value = parseInt(volumeControlR.value);
+gainNodeR.gain.value = parseFloat(volumeControlR.value);
 volumeControlR.addEventListener('input', function() {
     gainNodeR.gain.value = parseFloat(this.value);
 }, false);
@@ -456,8 +456,6 @@ const onAudioStopped = () => {
 		
 	pannerNode.disconnect(analyserNode);
 };
-
-audioElem.addEventListener('error', (evt) => { console.log(evt); });
 
 playButton.addEventListener('click', function () {
 	if (audioContext.state == 'suspended') {
