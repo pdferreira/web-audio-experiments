@@ -2,61 +2,61 @@
 
 const audioContext = new AudioContext();
 
-const audioElem = document.querySelector('audio');
+const audioElem = document.querySelector('audio') as HTMLAudioElement;
 const track = audioContext.createMediaElementSource(audioElem);
 
-const playButton = document.getElementById('playBtn');
+const playButton = document.getElementById('playBtn') as HTMLButtonElement;
 
 const gainNodeL = audioContext.createGain();
 const gainNodeR = audioContext.createGain();
-const volumeControlL = document.getElementById('volumeL');
-const volumeControlR = document.getElementById('volumeR');
+const volumeControlL = document.getElementById('volumeL') as HTMLInputElement;
+const volumeControlR = document.getElementById('volumeR') as HTMLInputElement;
 
-gainNodeL.gain.value = volumeControlL.value;
+gainNodeL.gain.value = parseInt(volumeControlL.value);
 volumeControlL.addEventListener('input', function() {
-    gainNodeL.gain.value = this.value;
+    gainNodeL.gain.value = parseFloat(this.value);
 }, false);
 
-gainNodeR.gain.value = volumeControlR.value;
+gainNodeR.gain.value = parseInt(volumeControlR.value);
 volumeControlR.addEventListener('input', function() {
-    gainNodeR.gain.value = this.value;
+    gainNodeR.gain.value = parseFloat(this.value);
 }, false);
 
 const pannerNode = new StereoPannerNode(audioContext, { pan: 0 });
-const pannerControl = document.getElementById('panner');
+const pannerControl = document.getElementById('panner') as HTMLInputElement;
 
 pannerControl.addEventListener('input', function() {
-    pannerNode.pan.value = this.value;
+    pannerNode.pan.value = parseFloat(this.value);
 }, false);
 
 const splitNode = audioContext.createChannelSplitter(2);
 const mergeLRNode = audioContext.createChannelMerger(2);
 const analyserNode = audioContext.createAnalyser();
 
-const filterTypeElem = document.getElementById('filterType');
-const filterFrequencyElem = document.getElementById('filterFrequency');
-const filterDetuneElem = document.getElementById('filterDetune');
-const filterQualityElem = document.getElementById('filterQuality');
-const filterGainElem = document.getElementById('filterGain');
+const filterTypeElem = document.getElementById('filterType') as HTMLSelectElement;
+const filterFrequencyElem = document.getElementById('filterFrequency') as HTMLInputElement;
+const filterDetuneElem = document.getElementById('filterDetune') as HTMLInputElement;
+const filterQualityElem = document.getElementById('filterQuality') as HTMLInputElement;
+const filterGainElem = document.getElementById('filterGain') as HTMLInputElement;
 
 const frequencyFilterNode = audioContext.createBiquadFilter();
 const originalAnalyserNode = audioContext.createAnalyser();
 track.connect(originalAnalyserNode);
 
 filterFrequencyElem.addEventListener('input', function() {
-	frequencyFilterNode.frequency.value = this.value;
+	frequencyFilterNode.frequency.value = parseInt(this.value);
 });
 
 filterDetuneElem.addEventListener('input', function() {
-	frequencyFilterNode.detune.value = this.value;
+	frequencyFilterNode.detune.value = parseInt(this.value);
 });
 
 filterQualityElem.addEventListener('input', function() {
-	frequencyFilterNode.Q.value = this.value;
+	frequencyFilterNode.Q.value = parseInt(this.value);
 });
 
 filterGainElem.addEventListener('input', function() {
-	frequencyFilterNode.gain.value = this.value;
+	frequencyFilterNode.gain.value = parseInt(this.value);
 });
 
 track.connect(splitNode);
@@ -73,12 +73,12 @@ mergeLRNode
 	.connect(pannerNode)
 	.connect(audioContext.destination);
 	
-const fftSizeElem = document.getElementById('fftSize');
+const fftSizeElem = document.getElementById('fftSize') as HTMLInputElement;
 analyserNode.fftSize = parseInt(fftSizeElem.value);
 originalAnalyserNode.fftSize = analyserNode.fftSize;
 
 // SPN = Scientific Pitch Notation
-const spnToSolfegeNotation = {
+const spnToSolfegeNotation: { [noteName: string]: string } = {
 	'C': 'Do',
 	'D': 'Re',
 	'E': 'Mi',
@@ -88,11 +88,11 @@ const spnToSolfegeNotation = {
 	'B': 'Si'
 };
 
-const translateToSolfegeNotation = function (spnNoteName) {
+const translateToSolfegeNotation = (spnNoteName: string) => {
 	return spnToSolfegeNotation[spnNoteName[0]] + spnNoteName.substring(1);
 };
 
-const numberToSubscript = function (number) {
+const numberToSubscript = (number: number) => {
 	const numberText = number.toString();
 	var result = "";
 	for (var i = 0; i < numberText.length; i++) {
@@ -102,34 +102,34 @@ const numberToSubscript = function (number) {
 	return result;
 }
 
-const checkIfTextFits = function (ctx, text, maxAllowedWidth) {
+const checkIfTextFits = (ctx: CanvasRenderingContext2D, text: string, maxAllowedWidth: number) => {
 	const textWidth = ctx.measureText(text).width;
 	return textWidth <= maxAllowedWidth;
 };
 
-const fillTextIfFits = function (ctx, text, x, y, maxAllowedWidth) {
+const fillTextIfFits = (ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxAllowedWidth: number) => {
 	if (checkIfTextFits(ctx, text, maxAllowedWidth)) {
 		ctx.fillText(text, x, y);
 	}
 };
 
-const maxDrawSamplesElem = document.getElementById('maxDrawSamples');
-const maxDrawLinesElem = document.getElementById('maxDrawLines');
+const maxDrawSamplesElem = document.getElementById('maxDrawSamples') as HTMLInputElement;
+const maxDrawLinesElem = document.getElementById('maxDrawLines') as HTMLInputElement;
 
-const waveformCanvasElem = document.getElementById('waveformCanvas');
+const waveformCanvasElem = document.getElementById('waveformCanvas') as HTMLCanvasElement;
 
-const WaveformChart = function (canvasElem, analyserNode) {
-	var animationHandle;
+const WaveformChart = function (canvasElem: HTMLCanvasElement, analyserNode: AnalyserNode) {
+	var animationHandle: number;
 	return {
 		width: canvasElem.width,
 		height: canvasElem.height,
 		canvasCtx: canvasElem.getContext('2d'),
-		data: undefined,
-		maxDrawSpanY: undefined,
-		maxDrawSpanX: undefined,
-		drawSpanX: undefined,
-		drawSpanY: undefined,
-		y: undefined,
+		data: undefined as Uint8Array,
+		maxDrawSpanY: undefined as number,
+		maxDrawSpanX: undefined as number,
+		drawSpanX: undefined as number,
+		drawSpanY: undefined as number,
+		y: undefined as number,
 		options: {
 			clearCanvas: true
 		},
@@ -209,20 +209,24 @@ const WaveformChart = function (canvasElem, analyserNode) {
 };
 
 
+type MouseEventHandler = (evt: MouseEvent) => any;
+
 const frequencyCanvasElem = document.getElementById('frequencyBarCanvas');
 
-const FrequencyBarChart = function (canvasElem, analyserNode) {
-	var animationHandle;
-	var mouseMoveHandler, mouseUpHandler, mouseDownHandler;
+const FrequencyBarChart = function (canvasElem: HTMLCanvasElement, analyserNode: AnalyserNode) {
+	var animationHandle: number;
+	var mouseMoveHandler: MouseEventHandler,
+		mouseUpHandler: MouseEventHandler,
+		mouseDownHandler: MouseEventHandler;
 	return {
 		scaleX: 1,
-		startX: undefined,
+		startX: undefined as number,
 		canvasCtx: canvasElem.getContext('2d'),
-		width: undefined,
-		height: undefined,
-		data: undefined,
-		barUnitWidth: undefined,
-		barUnitSpacingWidth: undefined,
+		width: undefined as number,
+		height: undefined as number,
+		data: undefined as Uint8Array,
+		barUnitWidth: undefined as number,
+		barUnitSpacingWidth: undefined as number,
 		options: {
 			drawLabels: true,
 			drawChromaticScale: false,
@@ -242,7 +246,7 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 				isDragging = true;
 			});
 			
-			canvasElem.addEventListener('mousemove', mouseMoveHandler = evt => {
+			canvasElem.addEventListener('mousemove', mouseMoveHandler = (evt: MouseEvent) => {
 				if (isDragging) {
 					this.startX = Math.min(0, this.startX + evt.movementX);
 				}
@@ -274,7 +278,7 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 			this.barUnitWidth = (this.width - spacingTotalWidth) / this.data.length;
 			this.barUnitSpacingWidth = spacingTotalWidth / (this.data.length - 1);
 		},
-		barFillStyle: function (barIdx) {
+		barFillStyle: function (barIdx: number) {
 			return 'rgb(' + (this.data[barIdx] / 2 + 150) + ', 0, 0)';
 		},
 		draw: function() {
@@ -345,17 +349,16 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 			}
 			
 			const maxFrequency = analyserNode.context.sampleRate / 2;
-			const maxDataVisibleInCanvas = Math.round(canvasElem.width / (this.barUnitWidth + this.barUnitSpacingWidth));
-			var x = this.startX;
+			var x = this.startX as number;
 			var prevFrequency = 1;
 			var accData = new Array();
-			var lastLabelEndX;
+			var lastLabelEndX: number;
 
 			for (var i = 0; i < this.data.length; i++) {
 				accData.push(this.data[i]);
 
 				const frequency = maxFrequency * (i + 1) / this.data.length;
-				var barWidth, barSpacingWidth;
+				var barWidth: number, barSpacingWidth: number;
 
 				if (this.options.logScale) {
 					const exponentScalingFactor = chromaticScale.length * (Math.log2(frequency) - Math.log2(prevFrequency));
@@ -409,15 +412,15 @@ const FrequencyBarChart = function (canvasElem, analyserNode) {
 	};
 };
 
-const waveformChart = new WaveformChart(waveformCanvasElem, analyserNode);
+const waveformChart = new (WaveformChart as any)(waveformCanvasElem, analyserNode);
 
-const originalWaveformChart = new WaveformChart(waveformCanvasElem, originalAnalyserNode);
+const originalWaveformChart = new (WaveformChart as any)(waveformCanvasElem, originalAnalyserNode);
 originalWaveformChart.lineStrokeStyle = function () { return 'darkgreen'; };
 
-const frequencyBarChart = new FrequencyBarChart(frequencyCanvasElem, analyserNode);
+const frequencyBarChart = new (FrequencyBarChart as any)(frequencyCanvasElem, analyserNode);
 
-const originalFreqBarChart = new FrequencyBarChart(frequencyCanvasElem, originalAnalyserNode);
-originalFreqBarChart.barFillStyle = function (barIdx) { return 'gray'; };
+const originalFreqBarChart = new (FrequencyBarChart as any)(frequencyCanvasElem, originalAnalyserNode);
+originalFreqBarChart.barFillStyle = function (barIdx: number) { return 'gray'; };
 
 const charts = [waveformChart, frequencyBarChart];
 
@@ -430,9 +433,10 @@ maxDrawLinesElem.addEventListener('input', function() {
 });
 
 fftSizeElem.addEventListener('change', function() {
-	const logBase2 = Math.log2(parseInt(this.value));
+	var currFFTSize = parseInt(this.value);
+	const logBase2 = Math.log2(currFFTSize);
 	
-	if (analyserNode.fftSize < this.value) {
+	if (analyserNode.fftSize < currFFTSize) {
 		analyserNode.fftSize = Math.pow(2, Math.ceil(logBase2));
 	} else {
 		analyserNode.fftSize = Math.pow(2, Math.floor(logBase2));
@@ -441,7 +445,7 @@ fftSizeElem.addEventListener('change', function() {
 	
 	charts.forEach(chart => chart.reset());
 
-	this.value = analyserNode.fftSize;
+	this.value = analyserNode.fftSize.toString();
 });
 
 const onAudioStopped = () => {
@@ -452,6 +456,8 @@ const onAudioStopped = () => {
 		
 	pannerNode.disconnect(analyserNode);
 };
+
+audioElem.addEventListener('error', (evt) => { console.log(evt); });
 
 playButton.addEventListener('click', function () {
 	if (audioContext.state == 'suspended') {
@@ -476,7 +482,7 @@ playButton.addEventListener('click', function () {
 
 audioElem.addEventListener('ended', onAudioStopped);
 
-const freqChartScaleElems = document.getElementsByName('freqChartScale');
+const freqChartScaleElems = document.getElementsByName('freqChartScale') as NodeListOf<HTMLInputElement>;
 for (const elem of freqChartScaleElems) {
 	elem.addEventListener('input', function () {
 		if (this.checked) {
@@ -493,7 +499,7 @@ for (const elem of freqChartScaleElems) {
 	elem.dispatchEvent(new Event('input'));
 }
 
-const audioFileElem = document.getElementById('audioFile');
+const audioFileElem = <HTMLInputElement> document.getElementById('audioFile');
 audioFileElem.addEventListener('change', function() {
 	const file = URL.createObjectURL(this.files[0]);
 	audioElem.src = file;
@@ -505,7 +511,7 @@ audioFileElem.addEventListener('change', function() {
 
 const recordBtn = document.getElementById('recordBtn');
 var recordingStream = null;
-var recordingSource = null;
+var recordingSource: MediaStreamAudioSourceNode = null;
 
 recordBtn.addEventListener('click', function() {
 	if (recordingSource) {
@@ -565,10 +571,10 @@ filterTypeElem.addEventListener('change', function() {
 		frequencyFilterNode.disconnect(splitNode);
 		track.connect(splitNode);
 
-		filterFrequencyElem.parentElement.classList = 'hidden';
-		filterDetuneElem.parentElement.classList = 'hidden';
-		filterQualityElem.parentElement.classList = 'hidden';
-		filterGainElem.parentElement.classList = 'hidden';
+		filterFrequencyElem.parentElement.classList.add('hidden');
+		filterDetuneElem.parentElement.classList.add('hidden');
+		filterQualityElem.parentElement.classList.add('hidden');
+		filterGainElem.parentElement.classList.add('hidden');
 
 		// remove original data charts
 		charts.splice(0, /*deleteCount*/2).forEach(chart => chart.stop());
@@ -578,21 +584,21 @@ filterTypeElem.addEventListener('change', function() {
 		frequencyBarChart.options.drawLabels = true;
 		frequencyBarChart.options.clearCanvas = true;
 		
-		this.dataset.filtering = false;
+		this.dataset.filtering = false.toString();
 	} else {
-		frequencyFilterNode.type = filterTypeElem.value;
+		frequencyFilterNode.type = filterTypeElem.value as BiquadFilterType;
 
 		if (this.dataset.filtering == 'false') {
-			filterFrequencyElem.value = frequencyFilterNode.frequency.value;
-			filterDetuneElem.value = frequencyFilterNode.detune.value;
-			filterQualityElem.value = frequencyFilterNode.Q.value;
-			filterGainElem.value = frequencyFilterNode.gain.value;	
+			filterFrequencyElem.value = frequencyFilterNode.frequency.value.toString();
+			filterDetuneElem.value = frequencyFilterNode.detune.value.toString();
+			filterQualityElem.value = frequencyFilterNode.Q.value.toString();
+			filterGainElem.value = frequencyFilterNode.gain.value.toString();	
 
 			track.disconnect(splitNode);
 			track.connect(frequencyFilterNode).connect(splitNode);
 
-			filterFrequencyElem.parentElement.classList = '';
-			filterDetuneElem.parentElement.classList = '';
+			filterFrequencyElem.parentElement.classList.remove('hidden');
+			filterDetuneElem.parentElement.classList.remove('hidden');
 
 			var chartsWereActive = charts.some(c => c.isActive);
 			
@@ -610,19 +616,19 @@ filterTypeElem.addEventListener('change', function() {
 				charts.forEach(chart => chart.start());
 			}
 			
-			this.dataset.filtering = true;
+			this.dataset.filtering = true.toString();
 		}
 
 		if (['lowshelf', 'highshelf'].indexOf(filterTypeElem.value) >= 0) {
-			filterQualityElem.parentElement.classList = 'hidden';
+			filterQualityElem.parentElement.classList.add('hidden');
 		} else {
-			filterQualityElem.parentElement.classList = '';
+			filterQualityElem.parentElement.classList.remove('hidden');
 		}
 
 		if (['lowshelf', 'highshelf', 'peaking'].indexOf(filterTypeElem.value) >= 0) {
-			filterGainElem.parentElement.classList = '';
+			filterGainElem.parentElement.classList.remove('hidden');
 		} else {
-			filterGainElem.parentElement.classList = 'hidden';
+			filterGainElem.parentElement.classList.add('hidden');
 		}
 	} 
 });
