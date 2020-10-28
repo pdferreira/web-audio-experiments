@@ -129,9 +129,13 @@ abstract class AbstractAnimatedChart implements IAnimatedChart {
 
 	private animationHandle: number;
 	
+	protected data: Uint8Array;
+	protected readonly analyserNode: AnalyserNode
+	
 	public isActive: boolean;
 
-	constructor () {
+	constructor (analyserNode: AnalyserNode) {
+		this.analyserNode = analyserNode;
 		this.isActive = false;
 	}
 
@@ -165,6 +169,7 @@ abstract class AbstractAnimatedChart implements IAnimatedChart {
 
 interface IWaveformChartOptions {
 	clearCanvas: boolean;
+	lineStrokeStyle(): string;
 }
 
 class WaveformChart extends AbstractAnimatedChart {
@@ -174,20 +179,20 @@ class WaveformChart extends AbstractAnimatedChart {
 	private readonly canvasCtx: CanvasRenderingContext2D;
 	public readonly options: IWaveformChartOptions;
 	
-	private data: Uint8Array;
 	private maxDrawSpanY: number;
 	private maxDrawSpanX: number;
 	private drawSpanX: number;
 	private drawSpanY: number;
 	private y: number;
 
-	constructor (canvasElem: HTMLCanvasElement, readonly analyserNode: AnalyserNode) {
-		super();
+	constructor (canvasElem: HTMLCanvasElement, analyserNode: AnalyserNode) {
+		super(analyserNode);
 		this.width = canvasElem.width;
 		this.height = canvasElem.height;
 		this.canvasCtx = canvasElem.getContext('2d');
 		this.options = {
-			clearCanvas: true
+			clearCanvas: true,
+			lineStrokeStyle: this.defaultLineStrokeStyle.bind(this)
 		};
 	}
 
@@ -200,7 +205,7 @@ class WaveformChart extends AbstractAnimatedChart {
 		this.y = 0;
 	}
 
-	public lineStrokeStyle() {
+	private defaultLineStrokeStyle() {
 		return 'rgb(' + (255 * this.drawSpanX / this.maxDrawSpanX) + ', 0, ' + (255 * this.drawSpanY / this.maxDrawSpanY) + ')';
 	}
 
@@ -213,7 +218,7 @@ class WaveformChart extends AbstractAnimatedChart {
 		}
 		
 		this.canvasCtx.lineWidth = 1;
-		this.canvasCtx.strokeStyle = this.lineStrokeStyle();
+		this.canvasCtx.strokeStyle = this.options.lineStrokeStyle();
 		this.canvasCtx.beginPath();
 		
 		const sliceWidth = (this.width / this.maxDrawSpanX) * 1.0 / this.data.length;
@@ -276,14 +281,13 @@ class FrequencyBarChart extends AbstractAnimatedChart {
 	private startX: number;
 	private width: number;
 	private height: number;
-	private data: Uint8Array;
 	private barUnitWidth: number;
 	private barUnitSpacingWidth: number;
 	
 	public options: IFrequencyBarChartOptions;
 	
-	constructor (readonly canvasElem: HTMLCanvasElement, readonly analyserNode: AnalyserNode) {
-		super();
+	constructor (readonly canvasElem: HTMLCanvasElement, analyserNode: AnalyserNode) {
+		super(analyserNode);
 		this.canvasCtx = canvasElem.getContext('2d');
 		this.options = {
 			drawLabels: true,
@@ -476,7 +480,7 @@ class FrequencyBarChart extends AbstractAnimatedChart {
 const waveformChart = new WaveformChart(waveformCanvasElem, analyserNode);
 
 const originalWaveformChart = new WaveformChart(waveformCanvasElem, originalAnalyserNode);
-originalWaveformChart.lineStrokeStyle = () => 'darkgreen';
+originalWaveformChart.options.lineStrokeStyle = () => 'darkgreen';
 
 const frequencyBarChart = new FrequencyBarChart(frequencyCanvasElem, analyserNode);
 
