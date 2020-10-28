@@ -118,311 +118,372 @@ const maxDrawLinesElem = document.getElementById('maxDrawLines') as HTMLInputEle
 
 const waveformCanvasElem = document.getElementById('waveformCanvas') as HTMLCanvasElement;
 
-const WaveformChart = function (canvasElem: HTMLCanvasElement, analyserNode: AnalyserNode) {
-	var animationHandle: number;
-	return {
-		width: canvasElem.width,
-		height: canvasElem.height,
-		canvasCtx: canvasElem.getContext('2d'),
-		data: undefined as Uint8Array,
-		maxDrawSpanY: undefined as number,
-		maxDrawSpanX: undefined as number,
-		drawSpanX: undefined as number,
-		drawSpanY: undefined as number,
-		y: undefined as number,
-		options: {
+interface IAnimatedChart {
+	readonly isActive: boolean;
+	start(): void;
+	stop(): void;
+	reset(): void;
+}
+
+abstract class AbstractAnimatedChart implements IAnimatedChart {
+
+	private animationHandle: number;
+	
+	public isActive: boolean;
+
+	constructor () {
+		this.isActive = false;
+	}
+
+	public abstract reset(): void;
+
+	protected abstract draw(): void;
+
+	private animate(): void {
+		if (this.isActive) {
+			this.animationHandle = window.requestAnimationFrame(this.animate.bind(this));
+		}
+
+		this.draw();
+	}
+
+	public start() {
+		this.reset();
+		this.isActive = true;
+		this.animate();
+	}
+
+	public stop() {
+		this.isActive = false;
+		if (this.animationHandle) {
+			window.cancelAnimationFrame(this.animationHandle);
+			this.animationHandle = null;
+		}
+	}
+
+}
+
+interface IWaveformChartOptions {
+	clearCanvas: boolean;
+}
+
+class WaveformChart extends AbstractAnimatedChart {
+
+	private readonly width: number;
+	private readonly height: number;
+	private readonly canvasCtx: CanvasRenderingContext2D;
+	public readonly options: IWaveformChartOptions;
+	
+	private data: Uint8Array;
+	private maxDrawSpanY: number;
+	private maxDrawSpanX: number;
+	private drawSpanX: number;
+	private drawSpanY: number;
+	private y: number;
+
+	constructor (canvasElem: HTMLCanvasElement, readonly analyserNode: AnalyserNode) {
+		super();
+		this.width = canvasElem.width;
+		this.height = canvasElem.height;
+		this.canvasCtx = canvasElem.getContext('2d');
+		this.options = {
 			clearCanvas: true
-		},
-		isActive: false,
-		start: function() {
-			this.reset();
-			this.isActive = true;
-			this.draw();
-		},
-		stop: function() {
-			this.isActive = false;
-			if (animationHandle) {
-				window.cancelAnimationFrame(animationHandle);
-				animationHandle = null;
-			}
-		},
-		reset: function() {
-			this.data = new Uint8Array(analyserNode.frequencyBinCount);
-			this.maxDrawSpanY = parseInt(maxDrawLinesElem.value);
-			this.maxDrawSpanX = parseInt(maxDrawSamplesElem.value) / this.maxDrawSpanY,
-			this.drawSpanX = 0;
-			this.drawSpanY = 0;
-			this.y = 0;
-		},
-		lineStrokeStyle: function() {
-			return 'rgb(' + (255 * this.drawSpanX / this.maxDrawSpanX) + ', 0, ' + (255 * this.drawSpanY / this.maxDrawSpanY) + ')';
-		},
-		draw: function() {
-			if (this.isActive) {
-				animationHandle = window.requestAnimationFrame(this.draw.bind(this));
-			}
-			
-			analyserNode.getByteTimeDomainData(this.data);
+		};
+	}
 
-			if (this.options.clearCanvas && this.drawSpanX == 0 && this.drawSpanY == 0) {
-				this.canvasCtx.fillStyle = 'rgb(200, 200, 200)';
-				this.canvasCtx.fillRect(0, 0, this.width, this.height);
-			}
-			
-			this.canvasCtx.lineWidth = 1;
-			this.canvasCtx.strokeStyle = this.lineStrokeStyle();
-			this.canvasCtx.beginPath();
-			
-			const sliceWidth = (this.width / this.maxDrawSpanX) * 1.0 / this.data.length;
-			var x = this.drawSpanX * this.width / this.maxDrawSpanX;
-			
-			if (this.drawSpanX > 0) {
-				this.canvasCtx.moveTo(x - sliceWidth, this.y);
-			}
-			
-			for(var i = 0; i < this.data.length; i++) {
+	public reset() {
+		this.data = new Uint8Array(this.analyserNode.frequencyBinCount);
+		this.maxDrawSpanY = parseInt(maxDrawLinesElem.value);
+		this.maxDrawSpanX = parseInt(maxDrawSamplesElem.value) / this.maxDrawSpanY,
+		this.drawSpanX = 0;
+		this.drawSpanY = 0;
+		this.y = 0;
+	}
+
+	public lineStrokeStyle() {
+		return 'rgb(' + (255 * this.drawSpanX / this.maxDrawSpanX) + ', 0, ' + (255 * this.drawSpanY / this.maxDrawSpanY) + ')';
+	}
+
+	protected draw() {
+		this.analyserNode.getByteTimeDomainData(this.data);
+
+		if (this.options.clearCanvas && this.drawSpanX == 0 && this.drawSpanY == 0) {
+			this.canvasCtx.fillStyle = 'rgb(200, 200, 200)';
+			this.canvasCtx.fillRect(0, 0, this.width, this.height);
+		}
 		
-				const v = this.data[i] / 128.0;
-				this.y = (this.drawSpanY * this.height/ this.maxDrawSpanY) + v * (this.height / this.maxDrawSpanY) / 2;
+		this.canvasCtx.lineWidth = 1;
+		this.canvasCtx.strokeStyle = this.lineStrokeStyle();
+		this.canvasCtx.beginPath();
+		
+		const sliceWidth = (this.width / this.maxDrawSpanX) * 1.0 / this.data.length;
+		var x = this.drawSpanX * this.width / this.maxDrawSpanX;
+		
+		if (this.drawSpanX > 0) {
+			this.canvasCtx.moveTo(x - sliceWidth, this.y);
+		}
+		
+		for(var i = 0; i < this.data.length; i++) {
+	
+			const v = this.data[i] / 128.0;
+			this.y = (this.drawSpanY * this.height/ this.maxDrawSpanY) + v * (this.height / this.maxDrawSpanY) / 2;
 
-				if (i === 0 && this.drawSpanX == 0) {
-					this.canvasCtx.moveTo(x, this.y);
-				} else {
-					this.canvasCtx.lineTo(x, this.y);
-				}
-
-				x += sliceWidth;
+			if (i === 0 && this.drawSpanX == 0) {
+				this.canvasCtx.moveTo(x, this.y);
+			} else {
+				this.canvasCtx.lineTo(x, this.y);
 			}
-			
-			this.canvasCtx.stroke();
 
-			this.drawSpanX++;
-			if (this.drawSpanX >= this.maxDrawSpanX) {
-				this.drawSpanX = 0;
-				this.drawSpanY++;
-				if (this.drawSpanY >= this.maxDrawSpanY) {
-					this.drawSpanY = 0;
-				}
+			x += sliceWidth;
+		}
+		
+		this.canvasCtx.stroke();
+
+		this.drawSpanX++;
+		if (this.drawSpanX >= this.maxDrawSpanX) {
+			this.drawSpanX = 0;
+			this.drawSpanY++;
+			if (this.drawSpanY >= this.maxDrawSpanY) {
+				this.drawSpanY = 0;
 			}
 		}
-	};
-};
+	}
+
+}
 
 
 type MouseEventHandler = (evt: MouseEvent) => any;
 
-const frequencyCanvasElem = document.getElementById('frequencyBarCanvas');
+const frequencyCanvasElem = document.getElementById('frequencyBarCanvas') as HTMLCanvasElement;
 
-const FrequencyBarChart = function (canvasElem: HTMLCanvasElement, analyserNode: AnalyserNode) {
-	var animationHandle: number;
-	var mouseMoveHandler: MouseEventHandler,
-		mouseUpHandler: MouseEventHandler,
-		mouseDownHandler: MouseEventHandler;
-	return {
-		scaleX: 1,
-		startX: undefined as number,
-		canvasCtx: canvasElem.getContext('2d'),
-		width: undefined as number,
-		height: undefined as number,
-		data: undefined as Uint8Array,
-		barUnitWidth: undefined as number,
-		barUnitSpacingWidth: undefined as number,
-		options: {
+interface IFrequencyBarChartOptions {
+	drawLabels: boolean;
+	drawChromaticScale: boolean;
+	useSolfegeNotation: boolean;
+	clearCanvas: boolean;
+	logScale: boolean;
+	scaleX: number;
+	barFillStyle(idx: number): string;
+}
+
+class FrequencyBarChart extends AbstractAnimatedChart {
+	
+	private readonly canvasCtx: CanvasRenderingContext2D;
+	
+	private mouseMoveHandler: MouseEventHandler;
+	private mouseUpHandler: MouseEventHandler;
+	private mouseDownHandler: MouseEventHandler;
+	private startX: number;
+	private width: number;
+	private height: number;
+	private data: Uint8Array;
+	private barUnitWidth: number;
+	private barUnitSpacingWidth: number;
+	
+	public options: IFrequencyBarChartOptions;
+	
+	constructor (readonly canvasElem: HTMLCanvasElement, readonly analyserNode: AnalyserNode) {
+		super();
+		this.canvasCtx = canvasElem.getContext('2d');
+		this.options = {
 			drawLabels: true,
 			drawChromaticScale: false,
 			useSolfegeNotation: false,
 			clearCanvas: true,
-			logScale: false
-		},
-		isActive: false,
-		start: function() {
-			this.reset();
-			this.isActive = true;
-			this.draw();
+			logScale: false,
+			scaleX: 1,
+			barFillStyle: this.defaultBarFillStyle.bind(this)
+		};
+	}
 
-			var isDragging = false;
+	private registerMouseEvents() {
+		var isDragging = false;
 
-			canvasElem.addEventListener('mousedown', mouseDownHandler = () => {
-				isDragging = true;
-			});
-			
-			canvasElem.addEventListener('mousemove', mouseMoveHandler = (evt: MouseEvent) => {
-				if (isDragging) {
-					this.startX = Math.min(0, this.startX + evt.movementX);
-				}
-			});
-
-			canvasElem.addEventListener('mouseup', mouseUpHandler = () => {
-				isDragging = false;
-			});
-		},
-		stop: function() {
-			this.isActive = false;
-			if (animationHandle) {
-				window.cancelAnimationFrame(animationHandle);
-				animationHandle = null;
+		this.canvasElem.addEventListener('mousedown', this.mouseDownHandler = () => {
+			isDragging = true;
+		});
+		
+		this.canvasElem.addEventListener('mousemove', this.mouseMoveHandler = (evt: MouseEvent) => {
+			if (isDragging) {
+				this.startX = Math.min(0, this.startX + evt.movementX);
 			}
+		});
 
-			canvasElem.removeEventListener('mousemove', mouseMoveHandler);
-			canvasElem.removeEventListener('mouseup', mouseUpHandler);
-			canvasElem.removeEventListener('mousedown', mouseDownHandler);
-		},
-		reset: function() {
-			this.data = new Uint8Array(analyserNode.frequencyBinCount);
-			this.width = canvasElem.width / this.scaleX;
-			this.height = canvasElem.height;
+		this.canvasElem.addEventListener('mouseup', this.mouseUpHandler = () => {
+			isDragging = false;
+		});
+	}
 
-			this.startX = 0;
+	private unregisterMouseEvents() {
+		this.canvasElem.removeEventListener('mousemove', this.mouseMoveHandler);
+		this.canvasElem.removeEventListener('mouseup', this.mouseUpHandler);
+		this.canvasElem.removeEventListener('mousedown', this.mouseDownHandler);
+	}
+		
+	public start() {
+		super.start();
+		this.registerMouseEvents();
+	}
 
-			const spacingTotalWidth = this.width / 10;
-			this.barUnitWidth = (this.width - spacingTotalWidth) / this.data.length;
-			this.barUnitSpacingWidth = spacingTotalWidth / (this.data.length - 1);
-		},
-		barFillStyle: function (barIdx: number) {
-			return 'rgb(' + (this.data[barIdx] / 2 + 150) + ', 0, 0)';
-		},
-		draw: function() {
-			if (this.isActive) {
-				animationHandle = window.requestAnimationFrame(this.draw.bind(this));
-			}
-			
-			analyserNode.getByteFrequencyData(this.data);
+	public stop() {
+		super.stop();
+		this.unregisterMouseEvents();
+	}
 
-			if (this.options.clearCanvas) {
-				this.canvasCtx.fillStyle = 'black';
-				this.canvasCtx.fillRect(0, 0, canvasElem.width, canvasElem.height);
-			}
+	public reset() {
+		this.data = new Uint8Array(this.analyserNode.frequencyBinCount);
+		this.width = this.canvasElem.width / this.options.scaleX;
+		this.height = this.canvasElem.height;
 
-			const chromaticScale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+		this.startX = 0;
 
-			if (this.options.drawChromaticScale && this.options.logScale) {
-				const noteWidth = this.barUnitWidth + this.barUnitSpacingWidth;
-				const noteSectionWidth = chromaticScale.length * noteWidth;
-				const labelMargin = 5;
-				const maxNoteTextWidth = noteWidth - 2;
+		const spacingTotalWidth = this.width / 10;
+		this.barUnitWidth = (this.width - spacingTotalWidth) / this.data.length;
+		this.barUnitSpacingWidth = spacingTotalWidth / (this.data.length - 1);
+	}
 
-				var octavePos = 0;
-				var frequency = 16.35; // start in C_0 note frequency, which is 16.35 Hz
-				var x = this.startX + Math.log2(frequency) * noteSectionWidth - noteWidth / 2;
-				var evenIteration = true;
+	private defaultBarFillStyle(barIdx: number) {
+		return 'rgb(' + (this.data[barIdx] / 2 + 150) + ', 0, 0)';
+	}
 
-				while (x < canvasElem.width) {
-					// fill section background in a even/odd pattern
-					this.canvasCtx.fillStyle = evenIteration ? '#222222' : 'black';
-					this.canvasCtx.fillRect(x, 0, noteSectionWidth, canvasElem.height);
-					
-					// divide the section in sub-sections for each note (if readable at all)
-					const octaveText = numberToSubscript(octavePos);
-					const sampleNote = 'C' + octaveText;
-					if (checkIfTextFits(this.canvasCtx, sampleNote, maxNoteTextWidth)) {
-						chromaticScale.forEach((note, idx) => {
-							const noteX = x + idx * noteWidth;
-							const noteMaxX = noteX + noteWidth - 1;
-							const startY = 30;
+	protected draw() {
+		this.analyserNode.getByteFrequencyData(this.data);
 
-							this.canvasCtx.strokeStyle = 'gray';
-							this.canvasCtx.beginPath();
-							this.canvasCtx.moveTo(noteMaxX, startY);
-							this.canvasCtx.lineTo(noteMaxX, canvasElem.height);
-							this.canvasCtx.stroke();
-							
-							const noteName = this.options.useSolfegeNotation ? translateToSolfegeNotation(note) : note;
-							this.canvasCtx.fillStyle = 'gray';
-							this.canvasCtx.textAlign = 'center';
-							fillTextIfFits(this.canvasCtx, noteName + octaveText, noteX + noteWidth / 2 - 1, startY, maxNoteTextWidth);
-						});
-					}
+		if (this.options.clearCanvas) {
+			this.canvasCtx.fillStyle = 'black';
+			this.canvasCtx.fillRect(0, 0, this.canvasElem.width, this.canvasElem.height);
+		}
 
-					// draw frequency label on top of the section
-					if (this.options.drawLabels) {
-						this.canvasCtx.fillStyle = 'white';
-						this.canvasCtx.textAlign = 'left';
-						this.canvasCtx.textBaseline = 'top';
-						fillTextIfFits(this.canvasCtx, frequency + ' Hz', x + labelMargin, labelMargin, noteSectionWidth - labelMargin * 2);
-					}
+		const chromaticScale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-					x += noteSectionWidth;
-					frequency *= 2;
-					octavePos++;
-					evenIteration = !evenIteration;
-				}
-			}
-			
-			const maxFrequency = analyserNode.context.sampleRate / 2;
-			var x = this.startX as number;
-			var prevFrequency = 1;
-			var accData = new Array();
-			var lastLabelEndX: number;
+		if (this.options.drawChromaticScale && this.options.logScale) {
+			const noteWidth = this.barUnitWidth + this.barUnitSpacingWidth;
+			const noteSectionWidth = chromaticScale.length * noteWidth;
+			const labelMargin = 5;
+			const maxNoteTextWidth = noteWidth - 2;
 
-			for (var i = 0; i < this.data.length; i++) {
-				accData.push(this.data[i]);
+			var octavePos = 0;
+			var frequency = 16.35; // start in C_0 note frequency, which is 16.35 Hz
+			var x = this.startX + Math.log2(frequency) * noteSectionWidth - noteWidth / 2;
+			var evenIteration = true;
 
-				const frequency = maxFrequency * (i + 1) / this.data.length;
-				var barWidth: number, barSpacingWidth: number;
-
-				if (this.options.logScale) {
-					const exponentScalingFactor = chromaticScale.length * (Math.log2(frequency) - Math.log2(prevFrequency));
-					barWidth = this.barUnitWidth * exponentScalingFactor;
-					barSpacingWidth = this.barUnitSpacingWidth * exponentScalingFactor;
-				} else {
-					barWidth = this.barUnitWidth * accData.length;
-					barSpacingWidth = this.barUnitSpacingWidth;
-				}
-
-				if (x >= canvasElem.width) {
-					// no longer visible inside canvas, no use in drawing
-					break;
-				}
-
-				// draw the bar if the accumulated width is meaningful
-				// otherwise just accumulate and perform the average later
-				// (better performance and also less cluttered visual)		
-				if (barWidth < 0.5) {
-					continue;
-				}
+			while (x < this.canvasElem.width) {
+				// fill section background in a even/odd pattern
+				this.canvasCtx.fillStyle = evenIteration ? '#222222' : 'black';
+				this.canvasCtx.fillRect(x, 0, noteSectionWidth, this.canvasElem.height);
 				
-				const avgAccData = accData.reduce((sum, v) => sum + v) / accData.length;
-				const barHeight = avgAccData / 2;
-				const y = this.height - barHeight;
+				// divide the section in sub-sections for each note (if readable at all)
+				const octaveText = numberToSubscript(octavePos);
+				const sampleNote = 'C' + octaveText;
+				if (checkIfTextFits(this.canvasCtx, sampleNote, maxNoteTextWidth)) {
+					chromaticScale.forEach((note, idx) => {
+						const noteX = x + idx * noteWidth;
+						const noteMaxX = noteX + noteWidth - 1;
+						const startY = 30;
 
-				this.canvasCtx.fillStyle = this.barFillStyle(i);
-				this.canvasCtx.fillRect(x, y, barWidth, barHeight);
-				
-				if (this.options.drawLabels) {
-					const label = Math.round(frequency) + 'Hz';
-					const labelWidth = this.canvasCtx.measureText(label).width;
-					const labelCenterX = x + barWidth / 2;
-					const labelStartX = labelCenterX - labelWidth / 2;
-
-					if (lastLabelEndX === undefined || labelStartX - lastLabelEndX >= 20) {
-						lastLabelEndX = labelStartX + labelWidth;
-
-						this.canvasCtx.fillStyle = 'white';
+						this.canvasCtx.strokeStyle = 'gray';
+						this.canvasCtx.beginPath();
+						this.canvasCtx.moveTo(noteMaxX, startY);
+						this.canvasCtx.lineTo(noteMaxX, this.canvasElem.height);
+						this.canvasCtx.stroke();
+						
+						const noteName = this.options.useSolfegeNotation ? translateToSolfegeNotation(note) : note;
+						this.canvasCtx.fillStyle = 'gray';
 						this.canvasCtx.textAlign = 'center';
-						this.canvasCtx.fillText(label, labelCenterX, y - 20);
-
-					}
+						fillTextIfFits(this.canvasCtx, noteName + octaveText, noteX + noteWidth / 2 - 1, startY, maxNoteTextWidth);
+					});
 				}
-				
-				x += barWidth + barSpacingWidth;
-				prevFrequency = frequency;
-				accData = new Array();
+
+				// draw frequency label on top of the section
+				if (this.options.drawLabels) {
+					this.canvasCtx.fillStyle = 'white';
+					this.canvasCtx.textAlign = 'left';
+					this.canvasCtx.textBaseline = 'top';
+					fillTextIfFits(this.canvasCtx, frequency + ' Hz', x + labelMargin, labelMargin, noteSectionWidth - labelMargin * 2);
+				}
+
+				x += noteSectionWidth;
+				frequency *= 2;
+				octavePos++;
+				evenIteration = !evenIteration;
 			}
 		}
-	};
-};
+		
+		const maxFrequency = this.analyserNode.context.sampleRate / 2;
+		var x = this.startX as number;
+		var prevFrequency = 1;
+		var accData = new Array();
+		var lastLabelEndX: number;
 
-const waveformChart = new (WaveformChart as any)(waveformCanvasElem, analyserNode);
+		for (var i = 0; i < this.data.length; i++) {
+			accData.push(this.data[i]);
 
-const originalWaveformChart = new (WaveformChart as any)(waveformCanvasElem, originalAnalyserNode);
-originalWaveformChart.lineStrokeStyle = function () { return 'darkgreen'; };
+			const frequency = maxFrequency * (i + 1) / this.data.length;
+			var barWidth: number, barSpacingWidth: number;
 
-const frequencyBarChart = new (FrequencyBarChart as any)(frequencyCanvasElem, analyserNode);
+			if (this.options.logScale) {
+				const exponentScalingFactor = chromaticScale.length * (Math.log2(frequency) - Math.log2(prevFrequency));
+				barWidth = this.barUnitWidth * exponentScalingFactor;
+				barSpacingWidth = this.barUnitSpacingWidth * exponentScalingFactor;
+			} else {
+				barWidth = this.barUnitWidth * accData.length;
+				barSpacingWidth = this.barUnitSpacingWidth;
+			}
 
-const originalFreqBarChart = new (FrequencyBarChart as any)(frequencyCanvasElem, originalAnalyserNode);
-originalFreqBarChart.barFillStyle = function (barIdx: number) { return 'gray'; };
+			if (x >= this.canvasElem.width) {
+				// no longer visible inside canvas, no use in drawing
+				break;
+			}
 
-const charts = [waveformChart, frequencyBarChart];
+			// draw the bar if the accumulated width is meaningful
+			// otherwise just accumulate and perform the average later
+			// (better performance and also less cluttered visual)		
+			if (barWidth < 0.5) {
+				continue;
+			}
+			
+			const avgAccData = accData.reduce((sum, v) => sum + v) / accData.length;
+			const barHeight = avgAccData / 2;
+			const y = this.height - barHeight;
+
+			this.canvasCtx.fillStyle = this.options.barFillStyle(i);
+			this.canvasCtx.fillRect(x, y, barWidth, barHeight);
+			
+			if (this.options.drawLabels) {
+				const label = Math.round(frequency) + 'Hz';
+				const labelWidth = this.canvasCtx.measureText(label).width;
+				const labelCenterX = x + barWidth / 2;
+				const labelStartX = labelCenterX - labelWidth / 2;
+
+				if (lastLabelEndX === undefined || labelStartX - lastLabelEndX >= 20) {
+					lastLabelEndX = labelStartX + labelWidth;
+
+					this.canvasCtx.fillStyle = 'white';
+					this.canvasCtx.textAlign = 'center';
+					this.canvasCtx.fillText(label, labelCenterX, y - 20);
+
+				}
+			}
+			
+			x += barWidth + barSpacingWidth;
+			prevFrequency = frequency;
+			accData = new Array();
+		}
+	}
+
+}
+
+const waveformChart = new WaveformChart(waveformCanvasElem, analyserNode);
+
+const originalWaveformChart = new WaveformChart(waveformCanvasElem, originalAnalyserNode);
+originalWaveformChart.lineStrokeStyle = () => 'darkgreen';
+
+const frequencyBarChart = new FrequencyBarChart(frequencyCanvasElem, analyserNode);
+
+const originalFreqBarChart = new FrequencyBarChart(frequencyCanvasElem, originalAnalyserNode);
+originalFreqBarChart.options.barFillStyle = (barIdx: number) => 'gray';
+
+const charts: IAnimatedChart[] = [waveformChart, frequencyBarChart];
 
 maxDrawSamplesElem.addEventListener('input', function() {
 	charts.forEach(chart => chart.reset());
@@ -488,10 +549,10 @@ for (const elem of freqChartScaleElems) {
 
 			frequencyBarChart.options.logScale = useLogScale;
 			frequencyBarChart.options.drawChromaticScale = useLogScale;
-			frequencyBarChart.scaleX = useLogScale ? Math.pow(2, -7) : 1; // useful default
+			frequencyBarChart.options.scaleX = useLogScale ? Math.pow(2, -7) : 1; // useful default
 
 			originalFreqBarChart.options.logScale = useLogScale;
-			originalFreqBarChart.scaleX = frequencyBarChart.scaleX;
+			originalFreqBarChart.options.scaleX = frequencyBarChart.options.scaleX;
 		}
 	});
 	elem.dispatchEvent(new Event('input'));
@@ -538,28 +599,28 @@ recordBtn.addEventListener('click', function() {
 
 const zoomInElem = document.getElementById('zoomInBtn');
 zoomInElem.addEventListener('click', function () {
-	frequencyBarChart.scaleX /= 2;
+	frequencyBarChart.options.scaleX /= 2;
 	frequencyBarChart.reset();
 
-	originalFreqBarChart.scaleX = frequencyBarChart.scaleX;
+	originalFreqBarChart.options.scaleX = frequencyBarChart.options.scaleX;
 	originalFreqBarChart.reset();
 });
 
 const zoomOutElem = document.getElementById('zoomOutBtn');
 zoomOutElem.addEventListener('click', function () {
-	frequencyBarChart.scaleX *= 2;
+	frequencyBarChart.options.scaleX *= 2;
 	frequencyBarChart.reset();
 
-	originalFreqBarChart.scaleX = frequencyBarChart.scaleX;
+	originalFreqBarChart.options.scaleX = frequencyBarChart.options.scaleX;
 	originalFreqBarChart.reset();
 });
 
 const zoomResetElem = document.getElementById('zoomResetBtn');
 zoomResetElem.addEventListener('click', function () {
-	frequencyBarChart.scaleX = 1;
+	frequencyBarChart.options.scaleX = 1;
 	frequencyBarChart.reset();
 
-	originalFreqBarChart.scaleX = 1;
+	originalFreqBarChart.options.scaleX = 1;
 	originalFreqBarChart.reset();
 });
 
