@@ -273,6 +273,9 @@ interface IFrequencyBarChartOptions {
 
 class FrequencyBarChart extends AbstractAnimatedChart {
 	
+	private static readonly chromaticScale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+	private static readonly chromaticScaleInSolfege = FrequencyBarChart.chromaticScale.map(translateToSolfegeNotation);
+	
 	private readonly canvasCtx: CanvasRenderingContext2D;
 	
 	private mouseMoveHandler: MouseEventHandler;
@@ -350,19 +353,9 @@ class FrequencyBarChart extends AbstractAnimatedChart {
 		return 'rgb(' + (this.data[barIdx] / 2 + 150) + ', 0, 0)';
 	}
 
-	protected draw() {
-		this.analyserNode.getByteFrequencyData(this.data);
-
-		if (this.options.clearCanvas) {
-			this.canvasCtx.fillStyle = 'black';
-			this.canvasCtx.fillRect(0, 0, this.canvasElem.width, this.canvasElem.height);
-		}
-
-		const chromaticScale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-
-		if (this.options.drawChromaticScale && this.options.logScale) {
+	private drawNoteScale(noteScale: string[]) {
 			const noteWidth = this.barUnitWidth + this.barUnitSpacingWidth;
-			const noteSectionWidth = chromaticScale.length * noteWidth;
+			const noteSectionWidth = noteScale.length * noteWidth;
 			const labelMargin = 5;
 			const maxNoteTextWidth = noteWidth - 2;
 
@@ -378,9 +371,9 @@ class FrequencyBarChart extends AbstractAnimatedChart {
 				
 				// divide the section in sub-sections for each note (if readable at all)
 				const octaveText = numberToSubscript(octavePos);
-				const sampleNote = 'C' + octaveText;
+				const sampleNote = noteScale[0] + octaveText;
 				if (checkIfTextFits(this.canvasCtx, sampleNote, maxNoteTextWidth)) {
-					chromaticScale.forEach((note, idx) => {
+					noteScale.forEach((note, idx) => {
 						const noteX = x + idx * noteWidth;
 						const noteMaxX = noteX + noteWidth - 1;
 						const startY = 30;
@@ -391,10 +384,9 @@ class FrequencyBarChart extends AbstractAnimatedChart {
 						this.canvasCtx.lineTo(noteMaxX, this.canvasElem.height);
 						this.canvasCtx.stroke();
 						
-						const noteName = this.options.useSolfegeNotation ? translateToSolfegeNotation(note) : note;
 						this.canvasCtx.fillStyle = 'gray';
 						this.canvasCtx.textAlign = 'center';
-						fillTextIfFits(this.canvasCtx, noteName + octaveText, noteX + noteWidth / 2 - 1, startY, maxNoteTextWidth);
+						fillTextIfFits(this.canvasCtx, note + octaveText, noteX + noteWidth / 2 - 1, startY, maxNoteTextWidth);
 					});
 				}
 
@@ -411,8 +403,9 @@ class FrequencyBarChart extends AbstractAnimatedChart {
 				octavePos++;
 				evenIteration = !evenIteration;
 			}
-		}
-		
+	}
+
+	private drawFrequencyBars(chromaticScale: string[]) {
 		const maxFrequency = this.analyserNode.context.sampleRate / 2;
 		var x = this.startX as number;
 		var prevFrequency = 1;
@@ -473,6 +466,25 @@ class FrequencyBarChart extends AbstractAnimatedChart {
 			prevFrequency = frequency;
 			accData = new Array();
 		}
+	}
+
+	protected draw() {
+		this.analyserNode.getByteFrequencyData(this.data);
+
+		if (this.options.clearCanvas) {
+			this.canvasCtx.fillStyle = 'black';
+			this.canvasCtx.fillRect(0, 0, this.canvasElem.width, this.canvasElem.height);
+		}
+
+		var chromaticScale = this.options.useSolfegeNotation ? 
+			FrequencyBarChart.chromaticScaleInSolfege :
+			FrequencyBarChart.chromaticScale;
+
+		if (this.options.drawChromaticScale && this.options.logScale) {
+			this.drawNoteScale(chromaticScale);
+		}
+		
+		this.drawFrequencyBars(chromaticScale);
 	}
 
 }
