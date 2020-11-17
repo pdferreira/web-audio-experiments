@@ -1,4 +1,4 @@
 .vscode/
 songs/
 node_modules/
-web_audio_experiments.js
+dist/
