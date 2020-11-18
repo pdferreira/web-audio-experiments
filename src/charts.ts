@@ -48,12 +48,10 @@ abstract class AbstractAnimatedChart implements IAnimatedChart {
 	private animationHandle: number;
 	
 	protected data: Uint8Array;
-	protected readonly analyserNode: AnalyserNode
 	
 	public isActive: boolean;
 
-	constructor (analyserNode: AnalyserNode) {
-		this.analyserNode = analyserNode;
+	constructor () {
 		this.isActive = false;
 	}
 
@@ -92,6 +90,7 @@ interface IWaveformChartOptions {
 
 export class WaveformChart extends AbstractAnimatedChart {
 
+	private readonly analyserNode: AnalyserNode;
 	private readonly width: number;
 	private readonly height: number;
     private readonly canvasCtx: CanvasRenderingContext2D;
@@ -111,7 +110,8 @@ export class WaveformChart extends AbstractAnimatedChart {
         maxDrawLinesElem: HTMLInputElement,
         maxDrawSamplesElem: HTMLInputElement
     ) {
-		super(analyserNode);
+        super();
+		this.analyserNode = analyserNode;
 		this.width = canvasElem.width;
 		this.height = canvasElem.height;
         this.canvasCtx = canvasElem.getContext('2d');
@@ -200,8 +200,11 @@ export class FrequencyBarChart extends AbstractAnimatedChart {
 	
 	private static readonly chromaticScale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 	private static readonly chromaticScaleInSolfege = FrequencyBarChart.chromaticScale.map(translateToSolfegeNotation);
-	
+    
+    private readonly analyserNode: AnalyserNode;
 	private readonly canvasCtx: CanvasRenderingContext2D;
+    private readonly canvasElem: HTMLCanvasElement;
+	public readonly options: IFrequencyBarChartOptions;
 	
 	private mouseMoveHandler: MouseEventHandler;
 	private mouseUpHandler: MouseEventHandler;
@@ -212,10 +215,10 @@ export class FrequencyBarChart extends AbstractAnimatedChart {
 	private barUnitWidth: number;
 	private barUnitSpacingWidth: number;
 	
-	public options: IFrequencyBarChartOptions;
-	
-	constructor (readonly canvasElem: HTMLCanvasElement, analyserNode: AnalyserNode) {
-		super(analyserNode);
+	constructor (canvasElem: HTMLCanvasElement, analyserNode: AnalyserNode) {
+        super();
+        this.analyserNode = analyserNode;
+        this.canvasElem = canvasElem;
 		this.canvasCtx = canvasElem.getContext('2d');
 		this.options = {
 			drawLabels: true,
