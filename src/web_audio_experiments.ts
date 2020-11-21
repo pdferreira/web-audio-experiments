@@ -9,27 +9,33 @@ const track = audioContext.createMediaElementSource(audioElem);
 
 const playButton = document.getElementById('playBtn') as HTMLButtonElement;
 
+function bindAudioParamToInput(param: AudioParam, input: HTMLInputElement) {
+	// bind param to input
+	input.addEventListener('input', function() {
+		param.value = parseFloat(this.value);
+	}, false);
+
+	// initialize with current input value if any
+	var initialValue = parseFloat(input.value);
+	if (!isNaN(initialValue)) {
+		param.value = initialValue;
+	}
+}
+
+function bindAudioParamToInputById(param: AudioParam, inputId: string) {
+	const input = document.getElementById(inputId) as HTMLInputElement;
+	bindAudioParamToInput(param, input);
+}
+
 const gainNodeL = audioContext.createGain();
 const gainNodeR = audioContext.createGain();
-const volumeControlL = document.getElementById('volumeL') as HTMLInputElement;
-const volumeControlR = document.getElementById('volumeR') as HTMLInputElement;
 
-gainNodeL.gain.value = parseFloat(volumeControlL.value);
-volumeControlL.addEventListener('input', function() {
-    gainNodeL.gain.value = parseFloat(this.value);
-}, false);
-
-gainNodeR.gain.value = parseFloat(volumeControlR.value);
-volumeControlR.addEventListener('input', function() {
-    gainNodeR.gain.value = parseFloat(this.value);
-}, false);
+bindAudioParamToInputById(gainNodeL.gain, 'volumeL');
+bindAudioParamToInputById(gainNodeR.gain, 'volumeR');
 
 const pannerNode = new StereoPannerNode(audioContext, { pan: 0 });
-const pannerControl = document.getElementById('panner') as HTMLInputElement;
 
-pannerControl.addEventListener('input', function() {
-    pannerNode.pan.value = parseFloat(this.value);
-}, false);
+bindAudioParamToInputById(pannerNode.pan, 'panner');
 
 const splitNode = audioContext.createChannelSplitter(2);
 const mergeLRNode = audioContext.createChannelMerger(2);
@@ -45,21 +51,10 @@ const frequencyFilterNode = audioContext.createBiquadFilter();
 const originalAnalyserNode = audioContext.createAnalyser();
 track.connect(originalAnalyserNode);
 
-filterFrequencyElem.addEventListener('input', function() {
-	frequencyFilterNode.frequency.value = parseInt(this.value);
-});
-
-filterDetuneElem.addEventListener('input', function() {
-	frequencyFilterNode.detune.value = parseInt(this.value);
-});
-
-filterQualityElem.addEventListener('input', function() {
-	frequencyFilterNode.Q.value = parseInt(this.value);
-});
-
-filterGainElem.addEventListener('input', function() {
-	frequencyFilterNode.gain.value = parseInt(this.value);
-});
+bindAudioParamToInput(frequencyFilterNode.frequency, filterFrequencyElem);
+bindAudioParamToInput(frequencyFilterNode.detune, filterDetuneElem);
+bindAudioParamToInput(frequencyFilterNode.Q, filterQualityElem);
+bindAudioParamToInput(frequencyFilterNode.gain, filterGainElem);
 
 track.connect(splitNode);
 
