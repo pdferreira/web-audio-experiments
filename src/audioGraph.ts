@@ -1,6 +1,6 @@
 ///<amd-module name='audioGraph'/>
 
- const audioContext = new AudioContext();
+const audioContext = new AudioContext();
 
 export const gainNodeL = audioContext.createGain();
 export const gainNodeR = audioContext.createGain();
