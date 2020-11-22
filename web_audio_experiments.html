@@ -3,8 +3,6 @@
 		<link rel="icon" href="data:;base64,iVBORw0KGgo=" /><!-- dummy favico -->
 		<link rel="stylesheet" href="web_audio_experiments.css"></style>
 		<script src="node_modules/requirejs/bin/r.js"></script>
-		<script src="dist/charts.js"></script>
-		<script src="dist/web_audio_experiments.js"></script>
 	</head>
 	<body>
 		<div>
@@ -76,6 +74,11 @@
 		<div>
 			<canvas id="frequencyBarCanvas" width="1024" height="256"></canvas>
 		</div>
-		<script>require(['web_audio_experiments']);</script>
+		<script>
+			require.config({
+				baseUrl: '/dist'
+			});
+			require(['web_audio_experiments']);
+		</script>
 	</body>
 </html>

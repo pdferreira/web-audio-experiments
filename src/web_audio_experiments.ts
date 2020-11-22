@@ -1,12 +1,9 @@
 ///<amd-module name='web_audio_experiments'/>
 
 import { FrequencyBarChart, WaveformChart, IAnimatedChart } from "./charts";
-
-const audioContext = new AudioContext();
+import * as audioGraph from "./audioGraph";
 
 const audioElem = document.querySelector('audio') as HTMLAudioElement;
-const track = audioContext.createMediaElementSource(audioElem);
-
 const playButton = document.getElementById('playBtn') as HTMLButtonElement;
 
 function bindAudioParamToInput(param: AudioParam, input: HTMLInputElement) {
@@ -27,19 +24,9 @@ function bindAudioParamToInputById(param: AudioParam, inputId: string) {
 	bindAudioParamToInput(param, input);
 }
 
-const gainNodeL = audioContext.createGain();
-const gainNodeR = audioContext.createGain();
-
-bindAudioParamToInputById(gainNodeL.gain, 'volumeL');
-bindAudioParamToInputById(gainNodeR.gain, 'volumeR');
-
-const pannerNode = new StereoPannerNode(audioContext, { pan: 0 });
-
-bindAudioParamToInputById(pannerNode.pan, 'panner');
-
-const splitNode = audioContext.createChannelSplitter(2);
-const mergeLRNode = audioContext.createChannelMerger(2);
-const analyserNode = audioContext.createAnalyser();
+bindAudioParamToInputById(audioGraph.gainNodeL.gain, 'volumeL');
+bindAudioParamToInputById(audioGraph.gainNodeR.gain, 'volumeR');
+bindAudioParamToInputById(audioGraph.pannerNode.pan, 'panner');
 
 const filterTypeElem = document.getElementById('filterType') as HTMLSelectElement;
 const filterFrequencyElem = document.getElementById('filterFrequency') as HTMLInputElement;
@@ -47,33 +34,15 @@ const filterDetuneElem = document.getElementById('filterDetune') as HTMLInputEle
 const filterQualityElem = document.getElementById('filterQuality') as HTMLInputElement;
 const filterGainElem = document.getElementById('filterGain') as HTMLInputElement;
 
-const frequencyFilterNode = audioContext.createBiquadFilter();
-const originalAnalyserNode = audioContext.createAnalyser();
-track.connect(originalAnalyserNode);
 
-bindAudioParamToInput(frequencyFilterNode.frequency, filterFrequencyElem);
-bindAudioParamToInput(frequencyFilterNode.detune, filterDetuneElem);
-bindAudioParamToInput(frequencyFilterNode.Q, filterQualityElem);
-bindAudioParamToInput(frequencyFilterNode.gain, filterGainElem);
-
-track.connect(splitNode);
-
-splitNode
-	.connect(gainNodeL, /*L*/0)
-	.connect(mergeLRNode, 0, /*L*/0);
-	
-splitNode
-	.connect(gainNodeR, /*R*/1)
-	.connect(mergeLRNode, 0, /*R*/1);
-	
-mergeLRNode
-	.connect(pannerNode)
-	.connect(audioContext.destination);
+bindAudioParamToInput(audioGraph.frequencyFilterNode.frequency, filterFrequencyElem);
+bindAudioParamToInput(audioGraph.frequencyFilterNode.detune, filterDetuneElem);
+bindAudioParamToInput(audioGraph.frequencyFilterNode.Q, filterQualityElem);
+bindAudioParamToInput(audioGraph.frequencyFilterNode.gain, filterGainElem);
 	
 const fftSizeElem = document.getElementById('fftSize') as HTMLInputElement;
-analyserNode.fftSize = parseInt(fftSizeElem.value);
-originalAnalyserNode.fftSize = analyserNode.fftSize;
-
+audioGraph.analyserNode.fftSize = parseInt(fftSizeElem.value);
+audioGraph.originalAnalyserNode.fftSize = audioGraph.analyserNode.fftSize;
 
 const maxDrawSamplesElem = document.getElementById('maxDrawSamples') as HTMLInputElement;
 const maxDrawLinesElem = document.getElementById('maxDrawLines') as HTMLInputElement;
@@ -82,14 +51,14 @@ const waveformCanvasElem = document.getElementById('waveformCanvas') as HTMLCanv
 
 const frequencyCanvasElem = document.getElementById('frequencyBarCanvas') as HTMLCanvasElement;
 
-const waveformChart = new WaveformChart(waveformCanvasElem, analyserNode, maxDrawLinesElem, maxDrawSamplesElem);
+const waveformChart = new WaveformChart(waveformCanvasElem, audioGraph.analyserNode, maxDrawLinesElem, maxDrawSamplesElem);
 
-const originalWaveformChart = new WaveformChart(waveformCanvasElem, originalAnalyserNode, maxDrawLinesElem, maxDrawSamplesElem);
+const originalWaveformChart = new WaveformChart(waveformCanvasElem, audioGraph.originalAnalyserNode, maxDrawLinesElem, maxDrawSamplesElem);
 originalWaveformChart.options.lineStrokeStyle = () => 'darkgreen';
 
-const frequencyBarChart = new FrequencyBarChart(frequencyCanvasElem, analyserNode);
+const frequencyBarChart = new FrequencyBarChart(frequencyCanvasElem, audioGraph.analyserNode);
 
-const originalFreqBarChart = new FrequencyBarChart(frequencyCanvasElem, originalAnalyserNode);
+const originalFreqBarChart = new FrequencyBarChart(frequencyCanvasElem, audioGraph.originalAnalyserNode);
 originalFreqBarChart.options.barFillStyle = (barIdx: number) => 'gray';
 
 const charts: IAnimatedChart[] = [waveformChart, frequencyBarChart];
@@ -106,16 +75,16 @@ fftSizeElem.addEventListener('change', function() {
 	var currFFTSize = parseInt(this.value);
 	const logBase2 = Math.log2(currFFTSize);
 	
-	if (analyserNode.fftSize < currFFTSize) {
-		analyserNode.fftSize = Math.pow(2, Math.ceil(logBase2));
+	if (audioGraph.analyserNode.fftSize < currFFTSize) {
+		audioGraph.analyserNode.fftSize = Math.pow(2, Math.ceil(logBase2));
 	} else {
-		analyserNode.fftSize = Math.pow(2, Math.floor(logBase2));
+		audioGraph.analyserNode.fftSize = Math.pow(2, Math.floor(logBase2));
 	}
-	originalAnalyserNode.fftSize = analyserNode.fftSize;
+	audioGraph.originalAnalyserNode.fftSize = audioGraph.analyserNode.fftSize;
 	
 	charts.forEach(chart => chart.reset());
 
-	this.value = analyserNode.fftSize.toString();
+	this.value = audioGraph.analyserNode.fftSize.toString();
 });
 
 const onAudioStopped = () => {
@@ -124,19 +93,15 @@ const onAudioStopped = () => {
 
 	charts.forEach(chart => chart.stop());
 		
-	pannerNode.disconnect(analyserNode);
+	audioGraph.unsetTrackSource();
 };
 
 playButton.addEventListener('click', function () {
-	if (audioContext.state == 'suspended') {
-		audioContext.resume();
-	}
-	
 	if (this.dataset.playing === 'false') {
 		audioElem.play();
 		this.dataset.playing = 'true';
 		
-		pannerNode.connect(analyserNode);
+		audioGraph.setTrackAsSource(audioElem);
 		
 		charts.forEach(chart => chart.start());
 		
@@ -178,31 +143,15 @@ audioFileElem.addEventListener('change', function() {
 });
 
 const recordBtn = document.getElementById('recordBtn');
-var recordingStream = null;
-var recordingSource: MediaStreamAudioSourceNode = null;
 
-recordBtn.addEventListener('click', function() {
-	if (recordingSource) {
-		recordingSource.mediaStream.getAudioTracks().forEach(function (track) { track.stop(); });
-		recordingSource.disconnect(analyserNode);
-		recordingSource = null;
-		
-		charts.forEach(chart => chart.stop());
-
-		recordBtn.innerHTML = 'Record';
+recordBtn.addEventListener('click', async function () {
+	const result = await audioGraph.toggleRecordingSource();
+	if (result.isRecording) {
+		charts.forEach(chart => chart.start());		
+		recordBtn.innerHTML = 'Recording...';
 	} else {
-		navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function (stream) {
-			recordingSource = audioContext.createMediaStreamSource(stream);
-			recordingSource.connect(analyserNode);
-			
-			if (audioContext.state == 'suspended') {
-				audioContext.resume();
-			}
-			
-			charts.forEach(chart => chart.start());
-			
-			recordBtn.innerHTML = 'Recording...';
-		});
+		charts.forEach(chart => chart.stop());
+		recordBtn.innerHTML = 'Record';
 	}
 });
 
@@ -235,9 +184,7 @@ zoomResetElem.addEventListener('click', function () {
 
 filterTypeElem.addEventListener('change', function() {
 	if (filterTypeElem.value === '' && this.dataset.filtering == 'true') {
-		track.disconnect(frequencyFilterNode);
-		frequencyFilterNode.disconnect(splitNode);
-		track.connect(splitNode);
+		audioGraph.deactivateFilter();
 
 		filterFrequencyElem.parentElement.classList.add('hidden');
 		filterDetuneElem.parentElement.classList.add('hidden');
@@ -254,16 +201,15 @@ filterTypeElem.addEventListener('change', function() {
 		
 		this.dataset.filtering = false.toString();
 	} else {
-		frequencyFilterNode.type = filterTypeElem.value as BiquadFilterType;
+		audioGraph.frequencyFilterNode.type = filterTypeElem.value as BiquadFilterType;
 
 		if (this.dataset.filtering == 'false') {
-			filterFrequencyElem.value = frequencyFilterNode.frequency.value.toString();
-			filterDetuneElem.value = frequencyFilterNode.detune.value.toString();
-			filterQualityElem.value = frequencyFilterNode.Q.value.toString();
-			filterGainElem.value = frequencyFilterNode.gain.value.toString();	
+			filterFrequencyElem.value = audioGraph.frequencyFilterNode.frequency.value.toString();
+			filterDetuneElem.value = audioGraph.frequencyFilterNode.detune.value.toString();
+			filterQualityElem.value = audioGraph.frequencyFilterNode.Q.value.toString();
+			filterGainElem.value = audioGraph.frequencyFilterNode.gain.value.toString();	
 
-			track.disconnect(splitNode);
-			track.connect(frequencyFilterNode).connect(splitNode);
+			audioGraph.activateFilter();
 
 			filterFrequencyElem.parentElement.classList.remove('hidden');
 			filterDetuneElem.parentElement.classList.remove('hidden');
