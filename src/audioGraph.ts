@@ -70,7 +70,7 @@ export function deactivateFilter() {
 
 // Using a recorded stream as source
 
-var recordingSource: MediaStreamAudioSourceNode = null;
+var recordingSource: MediaStreamAudioSourceNode | null = null;
 
 function setRecordingAsSource(recordingStream: MediaStream) {
     recordingSource = audioContext.createMediaStreamSource(recordingStream);
@@ -82,8 +82,8 @@ function setRecordingAsSource(recordingStream: MediaStream) {
 }
 
 function unsetRecordingSource() {
-    recordingSource.mediaStream.getAudioTracks().forEach(track => track.stop());
-    recordingSource.disconnect(analyserNode);
+    recordingSource!.mediaStream.getAudioTracks().forEach(track => track.stop());
+    recordingSource!.disconnect(analyserNode);
     recordingSource = null;
 }
 

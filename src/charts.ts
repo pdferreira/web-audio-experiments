@@ -45,9 +45,9 @@ export interface IAnimatedChart {
 
 abstract class AbstractAnimatedChart implements IAnimatedChart {
 
-	private animationHandle: number;
+	private animationHandle: number | null = null;
 	
-	protected data: Uint8Array;
+    protected data: Uint8Array = new Uint8Array(0);
 	
 	public isActive: boolean;
 
@@ -98,11 +98,11 @@ export class WaveformChart extends AbstractAnimatedChart {
     private readonly maxDrawSamplesElem: HTMLInputElement;
 	public readonly options: IWaveformChartOptions;
 	
-	private maxDrawSpanY: number;
-	private maxDrawSpanX: number;
-	private drawSpanX: number;
-	private drawSpanY: number;
-	private y: number;
+	private maxDrawSpanY: number = 0;
+	private maxDrawSpanX: number = 0;
+	private drawSpanX: number = 0;
+	private drawSpanY: number = 0;
+	private y: number = 0;
 
 	constructor (
         canvasElem: HTMLCanvasElement,
@@ -114,7 +114,7 @@ export class WaveformChart extends AbstractAnimatedChart {
 		this.analyserNode = analyserNode;
 		this.width = canvasElem.width;
 		this.height = canvasElem.height;
-        this.canvasCtx = canvasElem.getContext('2d');
+        this.canvasCtx = canvasElem.getContext('2d')!;
         this.maxDrawLinesElem = maxDrawLinesElem;
         this.maxDrawSamplesElem = maxDrawSamplesElem;
 		this.options = {
@@ -205,49 +205,52 @@ export class FrequencyBarChart extends AbstractAnimatedChart {
 	private readonly canvasCtx: CanvasRenderingContext2D;
     private readonly canvasElem: HTMLCanvasElement;
 	public readonly options: IFrequencyBarChartOptions;
-	
+    
 	private mouseMoveHandler: MouseEventHandler;
 	private mouseUpHandler: MouseEventHandler;
 	private mouseDownHandler: MouseEventHandler;
-	private startX: number;
-	private width: number;
-	private height: number;
-	private barUnitWidth: number;
-	private barUnitSpacingWidth: number;
+	private startX: number = 0;
+	private width: number = 0;
+	private height: number = 0;
+	private barUnitWidth: number = 0;
+	private barUnitSpacingWidth: number = 0;
 	
 	constructor (canvasElem: HTMLCanvasElement, analyserNode: AnalyserNode) {
         super();
         this.analyserNode = analyserNode;
         this.canvasElem = canvasElem;
-		this.canvasCtx = canvasElem.getContext('2d');
+        this.canvasCtx = canvasElem.getContext('2d')!;
 		this.options = {
-			drawLabels: true,
+            drawLabels: true,
 			drawChromaticScale: false,
 			useSolfegeNotation: false,
 			clearCanvas: true,
 			logScale: false,
 			scaleX: 1,
 			barFillStyle: this.defaultBarFillStyle.bind(this)
-		};
-	}
+        };
+        
+        // initialize mouse event handlers
+        var isDragging = false;
 
-	private registerMouseEvents() {
-		var isDragging = false;
-
-		this.canvasElem.addEventListener('mousedown', this.mouseDownHandler = () => {
+		this.mouseDownHandler = () => {
 			isDragging = true;
-		});
-		
-		this.canvasElem.addEventListener('mousemove', this.mouseMoveHandler = (evt: MouseEvent) => {
+		};
+		this.mouseMoveHandler = (evt: MouseEvent) => {
 			if (isDragging) {
 				this.startX = Math.min(0, this.startX + evt.movementX);
 			}
-		});
-
-		this.canvasElem.addEventListener('mouseup', this.mouseUpHandler = () => {
+		};
+		this.mouseUpHandler = () => {
 			isDragging = false;
-		});
+		};
 	}
+
+    private registerMouseEvents() {
+		this.canvasElem.addEventListener('mousedown', this.mouseDownHandler);
+		this.canvasElem.addEventListener('mousemove', this.mouseMoveHandler);
+		this.canvasElem.addEventListener('mouseup', this.mouseUpHandler);
+    }
 
 	private unregisterMouseEvents() {
 		this.canvasElem.removeEventListener('mousemove', this.mouseMoveHandler);
@@ -256,8 +259,8 @@ export class FrequencyBarChart extends AbstractAnimatedChart {
 	}
 		
 	public start() {
-		super.start();
-		this.registerMouseEvents();
+        super.start();
+        this.registerMouseEvents();
 	}
 
 	public stop() {
@@ -338,7 +341,7 @@ export class FrequencyBarChart extends AbstractAnimatedChart {
 		var x = this.startX as number;
 		var prevFrequency = 1;
 		var accData = new Array();
-		var lastLabelEndX: number;
+		var lastLabelEndX: number | null = null;
 
 		for (var i = 0; i < this.data.length; i++) {
 			accData.push(this.data[i]);
@@ -380,7 +383,7 @@ export class FrequencyBarChart extends AbstractAnimatedChart {
 				const labelCenterX = x + barWidth / 2;
 				const labelStartX = labelCenterX - labelWidth / 2;
 
-				if (lastLabelEndX === undefined || labelStartX - lastLabelEndX >= 20) {
+				if (lastLabelEndX === null || labelStartX - lastLabelEndX >= 20) {
 					lastLabelEndX = labelStartX + labelWidth;
 
 					this.canvasCtx.fillStyle = 'white';

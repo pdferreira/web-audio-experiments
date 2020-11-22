@@ -132,8 +132,12 @@ for (const elem of freqChartScaleElems) {
 	elem.dispatchEvent(new Event('input'));
 }
 
-const audioFileElem = <HTMLInputElement> document.getElementById('audioFile');
-audioFileElem.addEventListener('change', function() {
+const audioFileElem = document.getElementById('audioFile') as HTMLInputElement;
+audioFileElem.addEventListener('change', function () {
+	if (this.files == null || this.files.length === 0) {
+		return;
+	}
+
 	const file = URL.createObjectURL(this.files[0]);
 	audioElem.src = file;
 	
@@ -142,7 +146,7 @@ audioFileElem.addEventListener('change', function() {
 	}
 });
 
-const recordBtn = document.getElementById('recordBtn');
+const recordBtn = document.getElementById('recordBtn')!;
 
 recordBtn.addEventListener('click', async function () {
 	const result = await audioGraph.toggleRecordingSource();
@@ -155,7 +159,7 @@ recordBtn.addEventListener('click', async function () {
 	}
 });
 
-const zoomInElem = document.getElementById('zoomInBtn');
+const zoomInElem = document.getElementById('zoomInBtn')!;
 zoomInElem.addEventListener('click', function () {
 	frequencyBarChart.options.scaleX /= 2;
 	frequencyBarChart.reset();
@@ -164,7 +168,7 @@ zoomInElem.addEventListener('click', function () {
 	originalFreqBarChart.reset();
 });
 
-const zoomOutElem = document.getElementById('zoomOutBtn');
+const zoomOutElem = document.getElementById('zoomOutBtn')!;
 zoomOutElem.addEventListener('click', function () {
 	frequencyBarChart.options.scaleX *= 2;
 	frequencyBarChart.reset();
@@ -173,7 +177,7 @@ zoomOutElem.addEventListener('click', function () {
 	originalFreqBarChart.reset();
 });
 
-const zoomResetElem = document.getElementById('zoomResetBtn');
+const zoomResetElem = document.getElementById('zoomResetBtn')!;
 zoomResetElem.addEventListener('click', function () {
 	frequencyBarChart.options.scaleX = 1;
 	frequencyBarChart.reset();
@@ -186,10 +190,10 @@ filterTypeElem.addEventListener('change', function() {
 	if (filterTypeElem.value === '' && this.dataset.filtering == 'true') {
 		audioGraph.deactivateFilter();
 
-		filterFrequencyElem.parentElement.classList.add('hidden');
-		filterDetuneElem.parentElement.classList.add('hidden');
-		filterQualityElem.parentElement.classList.add('hidden');
-		filterGainElem.parentElement.classList.add('hidden');
+		filterFrequencyElem.parentElement!.classList.add('hidden');
+		filterDetuneElem.parentElement!.classList.add('hidden');
+		filterQualityElem.parentElement!.classList.add('hidden');
+		filterGainElem.parentElement!.classList.add('hidden');
 
 		// remove original data charts
 		charts.splice(0, /*deleteCount*/2).forEach(chart => chart.stop());
@@ -211,8 +215,8 @@ filterTypeElem.addEventListener('change', function() {
 
 			audioGraph.activateFilter();
 
-			filterFrequencyElem.parentElement.classList.remove('hidden');
-			filterDetuneElem.parentElement.classList.remove('hidden');
+			filterFrequencyElem.parentElement!.classList.remove('hidden');
+			filterDetuneElem.parentElement!.classList.remove('hidden');
 
 			var chartsWereActive = charts.some(c => c.isActive);
 			
@@ -234,15 +238,15 @@ filterTypeElem.addEventListener('change', function() {
 		}
 
 		if (['lowshelf', 'highshelf'].indexOf(filterTypeElem.value) >= 0) {
-			filterQualityElem.parentElement.classList.add('hidden');
+			filterQualityElem.parentElement!.classList.add('hidden');
 		} else {
-			filterQualityElem.parentElement.classList.remove('hidden');
+			filterQualityElem.parentElement!.classList.remove('hidden');
 		}
 
 		if (['lowshelf', 'highshelf', 'peaking'].indexOf(filterTypeElem.value) >= 0) {
-			filterGainElem.parentElement.classList.remove('hidden');
+			filterGainElem.parentElement!.classList.remove('hidden');
 		} else {
-			filterGainElem.parentElement.classList.add('hidden');
+			filterGainElem.parentElement!.classList.add('hidden');
 		}
 	} 
 });
