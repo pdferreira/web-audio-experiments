@@ -3,9 +3,6 @@
 import { FrequencyBarChart, WaveformChart, IAnimatedChart } from "./charts";
 import * as audioGraph from "./audioGraph";
 
-const audioElem = document.querySelector('audio') as HTMLAudioElement;
-const playButton = document.getElementById('playBtn') as HTMLButtonElement;
-
 function bindAudioParamToInput(param: AudioParam, input: HTMLInputElement) {
 	// bind param to input
 	input.addEventListener('input', function() {
@@ -24,6 +21,9 @@ function bindAudioParamToInputById(param: AudioParam, inputId: string) {
 	bindAudioParamToInput(param, input);
 }
 
+const audioElem = document.querySelector('audio') as HTMLAudioElement;
+const playButton = document.getElementById('playBtn') as HTMLButtonElement;
+
 bindAudioParamToInputById(audioGraph.gainNodeL.gain, 'volumeL');
 bindAudioParamToInputById(audioGraph.gainNodeR.gain, 'volumeR');
 bindAudioParamToInputById(audioGraph.pannerNode.pan, 'panner');
@@ -33,7 +33,6 @@ const filterFrequencyElem = document.getElementById('filterFrequency') as HTMLIn
 const filterDetuneElem = document.getElementById('filterDetune') as HTMLInputElement;
 const filterQualityElem = document.getElementById('filterQuality') as HTMLInputElement;
 const filterGainElem = document.getElementById('filterGain') as HTMLInputElement;
-
 
 bindAudioParamToInput(audioGraph.frequencyFilterNode.frequency, filterFrequencyElem);
 bindAudioParamToInput(audioGraph.frequencyFilterNode.detune, filterDetuneElem);
@@ -54,12 +53,16 @@ const frequencyCanvasElem = document.getElementById('frequencyBarCanvas') as HTM
 const waveformChart = new WaveformChart(waveformCanvasElem, audioGraph.analyserNode, maxDrawLinesElem, maxDrawSamplesElem);
 
 const originalWaveformChart = new WaveformChart(waveformCanvasElem, audioGraph.originalAnalyserNode, maxDrawLinesElem, maxDrawSamplesElem);
-originalWaveformChart.options.lineStrokeStyle = () => 'darkgreen';
+originalWaveformChart.setOptions({
+	customLineStrokeStyle: 'darkgreen'
+});
 
-const frequencyBarChart = new FrequencyBarChart(frequencyCanvasElem, audioGraph.analyserNode);
+export const frequencyBarChart = new FrequencyBarChart(frequencyCanvasElem, audioGraph.analyserNode);
 
-const originalFreqBarChart = new FrequencyBarChart(frequencyCanvasElem, audioGraph.originalAnalyserNode);
-originalFreqBarChart.options.barFillStyle = (barIdx: number) => 'gray';
+export const originalFreqBarChart = new FrequencyBarChart(frequencyCanvasElem, audioGraph.originalAnalyserNode);
+originalFreqBarChart.setOptions({
+	customBarFillStyle: 'gray'
+});
 
 const charts: IAnimatedChart[] = [waveformChart, frequencyBarChart];
 
@@ -121,12 +124,11 @@ for (const elem of freqChartScaleElems) {
 		if (this.checked) {
 			const useLogScale = this.value === 'log';
 
-			frequencyBarChart.options.logScale = useLogScale;
-			frequencyBarChart.options.drawChromaticScale = useLogScale;
-			frequencyBarChart.options.scaleX = useLogScale ? Math.pow(2, -7) : 1; // useful default
-
-			originalFreqBarChart.options.logScale = useLogScale;
-			originalFreqBarChart.options.scaleX = frequencyBarChart.options.scaleX;
+			frequencyBarChart.setOptions({
+				logScale: useLogScale,
+				drawChromaticScale: useLogScale,
+				scaleX: useLogScale ? Math.pow(2, -7) : 1 // useful default
+			});
 		}
 	});
 	elem.dispatchEvent(new Event('input'));
@@ -161,29 +163,17 @@ recordBtn.addEventListener('click', async function () {
 
 const zoomInElem = document.getElementById('zoomInBtn')!;
 zoomInElem.addEventListener('click', function () {
-	frequencyBarChart.options.scaleX /= 2;
-	frequencyBarChart.reset();
-
-	originalFreqBarChart.options.scaleX = frequencyBarChart.options.scaleX;
-	originalFreqBarChart.reset();
+	frequencyBarChart.updateOptions(opt => ({ scaleX: opt.scaleX / 2 }));
 });
 
 const zoomOutElem = document.getElementById('zoomOutBtn')!;
 zoomOutElem.addEventListener('click', function () {
-	frequencyBarChart.options.scaleX *= 2;
-	frequencyBarChart.reset();
-
-	originalFreqBarChart.options.scaleX = frequencyBarChart.options.scaleX;
-	originalFreqBarChart.reset();
+	frequencyBarChart.updateOptions(opt => ({ scaleX: opt.scaleX * 2}));
 });
 
 const zoomResetElem = document.getElementById('zoomResetBtn')!;
 zoomResetElem.addEventListener('click', function () {
-	frequencyBarChart.options.scaleX = 1;
-	frequencyBarChart.reset();
-
-	originalFreqBarChart.options.scaleX = 1;
-	originalFreqBarChart.reset();
+	frequencyBarChart.setOptions({ scaleX: 1 });
 });
 
 filterTypeElem.addEventListener('change', function() {
@@ -196,12 +186,12 @@ filterTypeElem.addEventListener('change', function() {
 		filterGainElem.parentElement!.classList.add('hidden');
 
 		// remove original data charts
-		charts.splice(0, /*deleteCount*/2).forEach(chart => chart.stop());
+		waveformChart.unlink(originalWaveformChart);
+		frequencyBarChart.unlink(originalFreqBarChart);
 
 		// re-setup regular chart options
-		waveformChart.options.clearCanvas = true;
-		frequencyBarChart.options.drawLabels = true;
-		frequencyBarChart.options.clearCanvas = true;
+		waveformChart.setOptions({ clearCanvas: true });
+		frequencyBarChart.setOptions({ drawLabels: true, clearCanvas: true });
 		
 		this.dataset.filtering = false.toString();
 	} else {
@@ -218,21 +208,13 @@ filterTypeElem.addEventListener('change', function() {
 			filterFrequencyElem.parentElement!.classList.remove('hidden');
 			filterDetuneElem.parentElement!.classList.remove('hidden');
 
-			var chartsWereActive = charts.some(c => c.isActive);
-			
 			// add original data charts
-			// regular charts need to be reset as well, so both are in sync in terms of drawing
-			charts.forEach(chart => chart.stop());
-			charts.unshift(originalWaveformChart, originalFreqBarChart);
+			waveformChart.link(originalWaveformChart);
+			frequencyBarChart.link(originalFreqBarChart);
 
 			// re-setup regular chart options
-			waveformChart.options.clearCanvas = false;
-			frequencyBarChart.options.drawLabels = false;
-			frequencyBarChart.options.clearCanvas = false;
-
-			if (chartsWereActive) {
-				charts.forEach(chart => chart.start());
-			}
+			waveformChart.setOptions({ clearCanvas: false });
+			frequencyBarChart.setOptions({ drawLabels: false, clearCanvas: false });
 			
 			this.dataset.filtering = true.toString();
 		}

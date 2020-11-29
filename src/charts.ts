@@ -11,11 +11,11 @@ const spnToSolfegeNotation: { [noteName: string]: string } = {
 	'B': 'Si'
 };
 
-const translateToSolfegeNotation = (spnNoteName: string) => {
+function translateToSolfegeNotation(spnNoteName: string) {
 	return spnToSolfegeNotation[spnNoteName[0]] + spnNoteName.substring(1);
-};
+}
 
-const numberToSubscript = (number: number) => {
+function numberToSubscript(number: number) {
 	const numberText = number.toString();
 	var result = "";
 	for (var i = 0; i < numberText.length; i++) {
@@ -25,70 +25,171 @@ const numberToSubscript = (number: number) => {
 	return result;
 }
 
-const checkIfTextFits = (ctx: CanvasRenderingContext2D, text: string, maxAllowedWidth: number) => {
+function checkIfTextFits(ctx: CanvasRenderingContext2D, text: string, maxAllowedWidth: number) {
 	const textWidth = ctx.measureText(text).width;
 	return textWidth <= maxAllowedWidth;
-};
+}
 
-const fillTextIfFits = (ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxAllowedWidth: number) => {
+function fillTextIfFits(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxAllowedWidth: number) {
 	if (checkIfTextFits(ctx, text, maxAllowedWidth)) {
 		ctx.fillText(text, x, y);
 	}
-};
-
-export interface IAnimatedChart {
-	readonly isActive: boolean;
-	start(): void;
-	stop(): void;
-	reset(): void;
 }
 
-abstract class AbstractAnimatedChart implements IAnimatedChart {
+function isDefined<T>(value: T): value is NonNullable<T> {
+    return value !== undefined && value !== null;
+}
 
-	private animationHandle: number | null = null;
-	
-    protected data: Uint8Array = new Uint8Array(0);
+export interface IAnimatedChart {
+    readonly isActive: boolean;
+    start(): void;
+    stop(): void;
+    reset(): void;
+}
+
+interface ILinkableChart<ChartT extends IAnimatedChart> {
+    link(chart: ChartT): void;
+    unlink(chart: ChartT): void;
+}
+
+export interface IConfigurableChart<OptionsT extends object> {
+    setOptions(options: Partial<OptionsT>): void;
+    updateOptions(options: (current: OptionsT) => Partial<OptionsT>): void;
+}
+
+abstract class AbstractAnimatedChart<
+    SelfT extends AbstractAnimatedChart<SelfT, OptionsT>,
+    OptionsT extends object
+>
+    implements IAnimatedChart, ILinkableChart<SelfT>, IConfigurableChart<OptionsT>
+{
+
+	private animationHandle: number | null;
+    private linkedCharts: SelfT[];
+    
+    protected readonly options: OptionsT;
+    protected readonly linkedOptions: (keyof OptionsT)[];
+    protected data: Uint8Array;
 	
 	public isActive: boolean;
 
-	constructor () {
-		this.isActive = false;
+    constructor(options: OptionsT, linkableOptions: (keyof OptionsT)[]) {
+        this.animationHandle = null;
+        this.linkedCharts = [];
+        this.options = options;
+        this.linkedOptions = linkableOptions;
+        this.data =  new Uint8Array(0);
+        this.isActive = false;
 	}
 
-	public abstract reset(): void;
-
+    protected abstract innerReset(): void;    
 	protected abstract draw(): void;
-
+    
 	private animate(): void {
-		if (this.isActive) {
-			this.animationHandle = window.requestAnimationFrame(this.animate.bind(this));
+        if (this.isActive) {
+            this.animationHandle = window.requestAnimationFrame(this.animate.bind(this));
 		}
-
+        
 		this.draw();
-	}
+    }
 
-	public start() {
-		this.reset();
+    private resetAnimation(): void {
+        if (this.animationHandle) {
+            window.cancelAnimationFrame(this.animationHandle);
+			this.animationHandle = null;
+        }
+
+        this.animationHandle = window.requestAnimationFrame(this.animate.bind(this))
+    }
+    
+    private getOnlyLinkedOptions(options: Partial<OptionsT>): Partial<OptionsT> {
+        let filteredOptions: Partial<OptionsT> = {};
+        for (let prop in options) {
+            if (this.linkedOptions.indexOf(prop) >= 0) {
+                filteredOptions[prop] = options[prop];
+            }
+        }
+        return filteredOptions;
+    } 
+    
+    public reset(): void {
+        this.innerReset();
+        this.linkedCharts.forEach(c => c.reset());
+    }
+
+    public start() {
+        if (this.isActive) {
+            return;
+        }
+
+		this.innerReset();
 		this.isActive = true;
-		this.animate();
+        this.linkedCharts.forEach(c => c.start());
+
+        // main chart gets rendered last
+        this.animate();
 	}
 
-	public stop() {
+    public stop() {
+        if (!this.isActive) {
+            return;
+        }
+
 		this.isActive = false;
 		if (this.animationHandle) {
 			window.cancelAnimationFrame(this.animationHandle);
 			this.animationHandle = null;
-		}
-	}
+        }
+        this.linkedCharts.forEach(c => c.stop());
+    }
+    
+    public link(chart: SelfT) {
+        this.linkedCharts.push(chart);
+        
+        chart.setOptions(this.getOnlyLinkedOptions(this.options));
+
+        if (this.isActive) {
+            chart.start();
+            this.resetAnimation();
+        } else {
+            chart.stop();
+        }
+    }
+
+    public unlink(chart: SelfT) {
+        const idx = this.linkedCharts.indexOf(chart);
+        if (idx >= 0) {
+            this.linkedCharts = this.linkedCharts.splice(idx, 1);
+        }
+
+        chart.stop();
+    }
+
+    public updateOptions(getOptions: (current: OptionsT) => Partial<OptionsT>): void {
+        this.setOptions(getOptions(this.options));
+    }
+    
+    public setOptions(options: Partial<OptionsT>): void {
+        for (let prop in options) {
+            var optValue = options[prop];
+            if (isDefined(optValue)) {
+                this.options[prop] = optValue;
+            }
+        }
+        this.innerReset();
+
+        const linkedOptions = this.getOnlyLinkedOptions(options);
+        this.linkedCharts.forEach(c => c.setOptions(linkedOptions));
+    }
 
 }
 
 interface IWaveformChartOptions {
 	clearCanvas: boolean;
-	lineStrokeStyle(): string;
+	customLineStrokeStyle?: string;
 }
 
-export class WaveformChart extends AbstractAnimatedChart {
+export class WaveformChart extends AbstractAnimatedChart<WaveformChart, IWaveformChartOptions> {
 
 	private readonly analyserNode: AnalyserNode;
 	private readonly width: number;
@@ -96,7 +197,6 @@ export class WaveformChart extends AbstractAnimatedChart {
     private readonly canvasCtx: CanvasRenderingContext2D;
     private readonly maxDrawLinesElem: HTMLInputElement;
     private readonly maxDrawSamplesElem: HTMLInputElement;
-	public readonly options: IWaveformChartOptions;
 	
 	private maxDrawSpanY: number = 0;
 	private maxDrawSpanX: number = 0;
@@ -110,20 +210,16 @@ export class WaveformChart extends AbstractAnimatedChart {
         maxDrawLinesElem: HTMLInputElement,
         maxDrawSamplesElem: HTMLInputElement
     ) {
-        super();
+        super({ clearCanvas: true }, []);
 		this.analyserNode = analyserNode;
 		this.width = canvasElem.width;
 		this.height = canvasElem.height;
         this.canvasCtx = canvasElem.getContext('2d')!;
         this.maxDrawLinesElem = maxDrawLinesElem;
         this.maxDrawSamplesElem = maxDrawSamplesElem;
-		this.options = {
-			clearCanvas: true,
-			lineStrokeStyle: this.defaultLineStrokeStyle.bind(this)
-		};
 	}
 
-	public reset() {
+	protected innerReset() {
 		this.data = new Uint8Array(this.analyserNode.frequencyBinCount);
 		this.maxDrawSpanY = parseInt(this.maxDrawLinesElem.value);
 		this.maxDrawSpanX = parseInt(this.maxDrawSamplesElem.value) / this.maxDrawSpanY,
@@ -132,8 +228,8 @@ export class WaveformChart extends AbstractAnimatedChart {
 		this.y = 0;
 	}
 
-	private defaultLineStrokeStyle() {
-		return 'rgb(' + (255 * this.drawSpanX / this.maxDrawSpanX) + ', 0, ' + (255 * this.drawSpanY / this.maxDrawSpanY) + ')';
+    private getDefaultLineStrokeStyle() {
+        return 'rgb(' + (255 * this.drawSpanX / this.maxDrawSpanX) + ', 0, ' + (255 * this.drawSpanY / this.maxDrawSpanY) + ')';
 	}
 
 	protected draw() {
@@ -145,7 +241,7 @@ export class WaveformChart extends AbstractAnimatedChart {
 		}
 		
 		this.canvasCtx.lineWidth = 1;
-		this.canvasCtx.strokeStyle = this.options.lineStrokeStyle();
+		this.canvasCtx.strokeStyle = this.options.customLineStrokeStyle ?? this.getDefaultLineStrokeStyle();
 		this.canvasCtx.beginPath();
 		
 		const sliceWidth = (this.width / this.maxDrawSpanX) * 1.0 / this.data.length;
@@ -193,10 +289,10 @@ interface IFrequencyBarChartOptions {
 	clearCanvas: boolean;
 	logScale: boolean;
 	scaleX: number;
-	barFillStyle(idx: number): string;
+	customBarFillStyle?: string;
 }
 
-export class FrequencyBarChart extends AbstractAnimatedChart {
+export class FrequencyBarChart extends AbstractAnimatedChart<FrequencyBarChart, IFrequencyBarChartOptions> {
 	
 	private static readonly chromaticScale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 	private static readonly chromaticScaleInSolfege = FrequencyBarChart.chromaticScale.map(translateToSolfegeNotation);
@@ -204,7 +300,6 @@ export class FrequencyBarChart extends AbstractAnimatedChart {
     private readonly analyserNode: AnalyserNode;
 	private readonly canvasCtx: CanvasRenderingContext2D;
     private readonly canvasElem: HTMLCanvasElement;
-	public readonly options: IFrequencyBarChartOptions;
     
 	private mouseMoveHandler: MouseEventHandler;
 	private mouseUpHandler: MouseEventHandler;
@@ -216,19 +311,20 @@ export class FrequencyBarChart extends AbstractAnimatedChart {
 	private barUnitSpacingWidth: number = 0;
 	
 	constructor (canvasElem: HTMLCanvasElement, analyserNode: AnalyserNode) {
-        super();
+        super({
+            drawLabels: true,
+            drawChromaticScale: false,
+            useSolfegeNotation: false,
+            clearCanvas: true,
+            logScale: false,
+            scaleX: 1
+        }, [
+            "scaleX",
+            "logScale"
+        ]);
         this.analyserNode = analyserNode;
         this.canvasElem = canvasElem;
         this.canvasCtx = canvasElem.getContext('2d')!;
-		this.options = {
-            drawLabels: true,
-			drawChromaticScale: false,
-			useSolfegeNotation: false,
-			clearCanvas: true,
-			logScale: false,
-			scaleX: 1,
-			barFillStyle: this.defaultBarFillStyle.bind(this)
-        };
         
         // initialize mouse event handlers
         var isDragging = false;
@@ -268,7 +364,7 @@ export class FrequencyBarChart extends AbstractAnimatedChart {
 		this.unregisterMouseEvents();
 	}
 
-	public reset() {
+	protected innerReset() {
 		this.data = new Uint8Array(this.analyserNode.frequencyBinCount);
 		this.width = this.canvasElem.width / this.options.scaleX;
 		this.height = this.canvasElem.height;
@@ -280,7 +376,7 @@ export class FrequencyBarChart extends AbstractAnimatedChart {
 		this.barUnitSpacingWidth = spacingTotalWidth / (this.data.length - 1);
 	}
 
-	private defaultBarFillStyle(barIdx: number) {
+    private getDefaultBarFillStyle(barIdx: number) {
 		return 'rgb(' + (this.data[barIdx] / 2 + 150) + ', 0, 0)';
 	}
 
@@ -374,7 +470,7 @@ export class FrequencyBarChart extends AbstractAnimatedChart {
 			const barHeight = avgAccData / 2;
 			const y = this.height - barHeight;
 
-			this.canvasCtx.fillStyle = this.options.barFillStyle(i);
+			this.canvasCtx.fillStyle = this.options.customBarFillStyle ?? this.getDefaultBarFillStyle(i);
 			this.canvasCtx.fillRect(x, y, barWidth, barHeight);
 			
 			if (this.options.drawLabels) {
