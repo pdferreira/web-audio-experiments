@@ -2,23 +2,11 @@
 
 import { FrequencyBarChart, WaveformChart, IAnimatedChart } from "./charts";
 import * as audioGraph from "./audioGraph";
-
-function bindAudioParamToInput(param: AudioParam, input: HTMLInputElement) {
-	// bind param to input
-	input.addEventListener('input', function() {
-		param.value = parseFloat(this.value);
-	}, false);
-
-	// initialize with current input value if any
-	var initialValue = parseFloat(input.value);
-	if (!isNaN(initialValue)) {
-		param.value = initialValue;
-	}
-}
+import * as filterControl from "./filterControl";
 
 function bindAudioParamToInputById(param: AudioParam, inputId: string) {
 	const input = document.getElementById(inputId) as HTMLInputElement;
-	bindAudioParamToInput(param, input);
+	audioGraph.bindAudioParamToInput(param, input);
 }
 
 const audioElem = document.querySelector('audio') as HTMLAudioElement;
@@ -27,17 +15,6 @@ const playButton = document.getElementById('playBtn') as HTMLButtonElement;
 bindAudioParamToInputById(audioGraph.gainNodeL.gain, 'volumeL');
 bindAudioParamToInputById(audioGraph.gainNodeR.gain, 'volumeR');
 bindAudioParamToInputById(audioGraph.pannerNode.pan, 'panner');
-
-const filterTypeElem = document.getElementById('filterType') as HTMLSelectElement;
-const filterFrequencyElem = document.getElementById('filterFrequency') as HTMLInputElement;
-const filterDetuneElem = document.getElementById('filterDetune') as HTMLInputElement;
-const filterQualityElem = document.getElementById('filterQuality') as HTMLInputElement;
-const filterGainElem = document.getElementById('filterGain') as HTMLInputElement;
-
-bindAudioParamToInput(audioGraph.frequencyFilterNode.frequency, filterFrequencyElem);
-bindAudioParamToInput(audioGraph.frequencyFilterNode.detune, filterDetuneElem);
-bindAudioParamToInput(audioGraph.frequencyFilterNode.Q, filterQualityElem);
-bindAudioParamToInput(audioGraph.frequencyFilterNode.gain, filterGainElem);
 	
 const fftSizeElem = document.getElementById('fftSize') as HTMLInputElement;
 audioGraph.analyserNode.fftSize = parseInt(fftSizeElem.value);
@@ -176,15 +153,17 @@ zoomResetElem.addEventListener('click', function () {
 	frequencyBarChart.setOptions({ scaleX: 1 });
 });
 
-filterTypeElem.addEventListener('change', function() {
-	if (filterTypeElem.value === '' && this.dataset.filtering == 'true') {
-		audioGraph.deactivateFilter();
+filterControl.setup(
+	/*onActivate*/() => {
+		// add original data charts
+		waveformChart.link(originalWaveformChart);
+		frequencyBarChart.link(originalFreqBarChart);
 
-		filterFrequencyElem.parentElement!.classList.add('hidden');
-		filterDetuneElem.parentElement!.classList.add('hidden');
-		filterQualityElem.parentElement!.classList.add('hidden');
-		filterGainElem.parentElement!.classList.add('hidden');
-
+		// re-setup regular chart options
+		waveformChart.setOptions({ clearCanvas: false });
+		frequencyBarChart.setOptions({ drawLabels: false, clearCanvas: false });
+	},
+	/*onDeactivate*/() => {
 		// remove original data charts
 		waveformChart.unlink(originalWaveformChart);
 		frequencyBarChart.unlink(originalFreqBarChart);
@@ -192,43 +171,5 @@ filterTypeElem.addEventListener('change', function() {
 		// re-setup regular chart options
 		waveformChart.setOptions({ clearCanvas: true });
 		frequencyBarChart.setOptions({ drawLabels: true, clearCanvas: true });
-		
-		this.dataset.filtering = false.toString();
-	} else {
-		audioGraph.frequencyFilterNode.type = filterTypeElem.value as BiquadFilterType;
-
-		if (this.dataset.filtering == 'false') {
-			filterFrequencyElem.value = audioGraph.frequencyFilterNode.frequency.value.toString();
-			filterDetuneElem.value = audioGraph.frequencyFilterNode.detune.value.toString();
-			filterQualityElem.value = audioGraph.frequencyFilterNode.Q.value.toString();
-			filterGainElem.value = audioGraph.frequencyFilterNode.gain.value.toString();	
-
-			audioGraph.activateFilter();
-
-			filterFrequencyElem.parentElement!.classList.remove('hidden');
-			filterDetuneElem.parentElement!.classList.remove('hidden');
-
-			// add original data charts
-			waveformChart.link(originalWaveformChart);
-			frequencyBarChart.link(originalFreqBarChart);
-
-			// re-setup regular chart options
-			waveformChart.setOptions({ clearCanvas: false });
-			frequencyBarChart.setOptions({ drawLabels: false, clearCanvas: false });
-			
-			this.dataset.filtering = true.toString();
-		}
-
-		if (['lowshelf', 'highshelf'].indexOf(filterTypeElem.value) >= 0) {
-			filterQualityElem.parentElement!.classList.add('hidden');
-		} else {
-			filterQualityElem.parentElement!.classList.remove('hidden');
-		}
-
-		if (['lowshelf', 'highshelf', 'peaking'].indexOf(filterTypeElem.value) >= 0) {
-			filterGainElem.parentElement!.classList.remove('hidden');
-		} else {
-			filterGainElem.parentElement!.classList.add('hidden');
-		}
-	} 
-});
+	}
+);

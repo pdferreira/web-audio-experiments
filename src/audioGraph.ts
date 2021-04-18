@@ -97,3 +97,16 @@ export async function toggleRecordingSource(): Promise<{ isRecording: boolean }>
         return { isRecording: true };
     }
 }
+
+export function bindAudioParamToInput(param: AudioParam, input: HTMLInputElement) {
+	// bind param to input
+	input.addEventListener('input', function() {
+		param.value = parseFloat(this.value);
+	}, false);
+
+	// initialize with current input value if any
+	var initialValue = parseFloat(input.value);
+	if (!isNaN(initialValue)) {
+		param.value = initialValue;
+	}
+}
