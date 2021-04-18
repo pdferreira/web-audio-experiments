@@ -1,7 +1,7 @@
 <html>
 	<head>
 		<link rel="icon" href="data:;base64,iVBORw0KGgo=" /><!-- dummy favico -->
-		<link rel="stylesheet" href="web_audio_experiments.css"></style>
+		<link rel="stylesheet" href="styles.css"></style>
 		<script src="node_modules/requirejs/require.js"></script>
 	</head>
 	<body>
@@ -10,7 +10,7 @@
 				<div class="control-panel-title">Input</div>
 				<div>
 					<input id="audioFile" type="file" accept="audio/*">
-					<audio src="songs/14-The%20Rains%20of%20Castamere.mp3" type="audio/mpeg"></audio>
+					<audio type="audio/mpeg"></audio>
 					<button id="playBtn" data-playing="false">Play</button>
 				</div>
 				<div>
@@ -78,7 +78,7 @@
 			require.config({
 				baseUrl: '/dist'
 			});
-			require(['web_audio_experiments']);
+			require(['main']);
 		</script>
 	</body>
 </html>

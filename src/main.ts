@@ -1,4 +1,4 @@
-///<amd-module name='web_audio_experiments'/>
+///<amd-module name='main'/>
 
 import { FrequencyBarChart, WaveformChart, IAnimatedChart } from "./charts";
 import * as audioGraph from "./audioGraph";

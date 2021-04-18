@@ -10,7 +10,7 @@
     "typescript": "^4.0.3"
   },
   "scripts": {
-    "start": "pwsh start.ps1",
+    "start": "http-server -c0 .",
     "build": "tsc"
   }
 }
