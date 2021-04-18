@@ -3,14 +3,12 @@
 import { FrequencyBarChart, WaveformChart, IAnimatedChart } from "./charts";
 import * as audioGraph from "./audioGraph";
 import * as filterControl from "./filterControl";
+import * as playbackControl from "./playbackControl";
 
 function bindAudioParamToInputById(param: AudioParam, inputId: string) {
 	const input = document.getElementById(inputId) as HTMLInputElement;
 	audioGraph.bindAudioParamToInput(param, input);
 }
-
-const audioElem = document.querySelector('audio') as HTMLAudioElement;
-const playButton = document.getElementById('playBtn') as HTMLButtonElement;
 
 bindAudioParamToInputById(audioGraph.gainNodeL.gain, 'volumeL');
 bindAudioParamToInputById(audioGraph.gainNodeR.gain, 'volumeR');
@@ -43,6 +41,8 @@ originalFreqBarChart.setOptions({
 
 const charts: IAnimatedChart[] = [waveformChart, frequencyBarChart];
 
+playbackControl.setup(charts);
+
 maxDrawSamplesElem.addEventListener('input', function() {
 	charts.forEach(chart => chart.reset());
 });
@@ -67,34 +67,6 @@ fftSizeElem.addEventListener('change', function() {
 	this.value = audioGraph.analyserNode.fftSize.toString();
 });
 
-const onAudioStopped = () => {
-	playButton.dataset.playing = 'false';
-	playButton.innerHTML = 'Play';
-
-	charts.forEach(chart => chart.stop());
-		
-	audioGraph.unsetTrackSource();
-};
-
-playButton.addEventListener('click', function () {
-	if (this.dataset.playing === 'false') {
-		audioElem.play();
-		this.dataset.playing = 'true';
-		
-		audioGraph.setTrackAsSource(audioElem);
-		
-		charts.forEach(chart => chart.start());
-		
-		playButton.innerHTML = 'Pause';
-	} else if (this.dataset.playing === 'true') {
-		audioElem.pause();
-		onAudioStopped();
-	}
-}, false);
-
-
-audioElem.addEventListener('ended', onAudioStopped);
-
 const freqChartScaleElems = document.getElementsByName('freqChartScale') as NodeListOf<HTMLInputElement>;
 for (const elem of freqChartScaleElems) {
 	elem.addEventListener('input', function () {
@@ -110,33 +82,6 @@ for (const elem of freqChartScaleElems) {
 	});
 	elem.dispatchEvent(new Event('input'));
 }
-
-const audioFileElem = document.getElementById('audioFile') as HTMLInputElement;
-audioFileElem.addEventListener('change', function () {
-	if (this.files == null || this.files.length === 0) {
-		return;
-	}
-
-	const file = URL.createObjectURL(this.files[0]);
-	audioElem.src = file;
-	
-	if (playButton.dataset.playing === 'true') {
-		audioElem.play();
-	}
-});
-
-const recordBtn = document.getElementById('recordBtn')!;
-
-recordBtn.addEventListener('click', async function () {
-	const result = await audioGraph.toggleRecordingSource();
-	if (result.isRecording) {
-		charts.forEach(chart => chart.start());		
-		recordBtn.innerHTML = 'Recording...';
-	} else {
-		charts.forEach(chart => chart.stop());
-		recordBtn.innerHTML = 'Record';
-	}
-});
 
 const zoomInElem = document.getElementById('zoomInBtn')!;
 zoomInElem.addEventListener('click', function () {
