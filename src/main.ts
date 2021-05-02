@@ -1,9 +1,11 @@
 ///<amd-module name='main'/>
 
-import { FrequencyBarChart, WaveformChart, IAnimatedChart } from "./charts";
+import { IAnimatedChart } from "./charts";
 import * as audioGraph from "./audioGraph";
 import * as filterControl from "./filterControl";
 import * as playbackControl from "./playbackControl";
+import * as frequencyChartControl from "./frequencyChartControl";
+import * as waveformChartControl from "./waveformChartControl";
 
 function bindAudioParamToInputById(param: AudioParam, inputId: string) {
 	const input = document.getElementById(inputId) as HTMLInputElement;
@@ -18,38 +20,12 @@ const fftSizeElem = document.getElementById('fftSize') as HTMLInputElement;
 audioGraph.analyserNode.fftSize = parseInt(fftSizeElem.value);
 audioGraph.originalAnalyserNode.fftSize = audioGraph.analyserNode.fftSize;
 
-const maxDrawSamplesElem = document.getElementById('maxDrawSamples') as HTMLInputElement;
-const maxDrawLinesElem = document.getElementById('maxDrawLines') as HTMLInputElement;
+const frequencyControl = frequencyChartControl.setup();
+const waveformControl = waveformChartControl.setup();
 
-const waveformCanvasElem = document.getElementById('waveformCanvas') as HTMLCanvasElement;
-
-const frequencyCanvasElem = document.getElementById('frequencyBarCanvas') as HTMLCanvasElement;
-
-const waveformChart = new WaveformChart(waveformCanvasElem, audioGraph.analyserNode, maxDrawLinesElem, maxDrawSamplesElem);
-
-const originalWaveformChart = new WaveformChart(waveformCanvasElem, audioGraph.originalAnalyserNode, maxDrawLinesElem, maxDrawSamplesElem);
-originalWaveformChart.setOptions({
-	customLineStrokeStyle: 'darkgreen'
-});
-
-export const frequencyBarChart = new FrequencyBarChart(frequencyCanvasElem, audioGraph.analyserNode);
-
-export const originalFreqBarChart = new FrequencyBarChart(frequencyCanvasElem, audioGraph.originalAnalyserNode);
-originalFreqBarChart.setOptions({
-	customBarFillStyle: 'gray'
-});
-
-const charts: IAnimatedChart[] = [waveformChart, frequencyBarChart];
+const charts: IAnimatedChart[] = [waveformControl.chart, frequencyControl.chart];
 
 playbackControl.setup(charts);
-
-maxDrawSamplesElem.addEventListener('input', function() {
-	charts.forEach(chart => chart.reset());
-});
-
-maxDrawLinesElem.addEventListener('input', function() {
-	charts.forEach(chart => chart.reset());
-});
 
 fftSizeElem.addEventListener('change', function() {
 	var currFFTSize = parseInt(this.value);
@@ -67,54 +43,23 @@ fftSizeElem.addEventListener('change', function() {
 	this.value = audioGraph.analyserNode.fftSize.toString();
 });
 
-const freqChartScaleElems = document.getElementsByName('freqChartScale') as NodeListOf<HTMLInputElement>;
-for (const elem of freqChartScaleElems) {
-	elem.addEventListener('input', function () {
-		if (this.checked) {
-			const useLogScale = this.value === 'log';
-
-			frequencyBarChart.setOptions({
-				logScale: useLogScale,
-				drawChromaticScale: useLogScale,
-				scaleX: useLogScale ? Math.pow(2, -7) : 1 // useful default
-			});
-		}
-	});
-	elem.dispatchEvent(new Event('input'));
-}
-
-const zoomInElem = document.getElementById('zoomInBtn')!;
-zoomInElem.addEventListener('click', function () {
-	frequencyBarChart.updateOptions(opt => ({ scaleX: opt.scaleX / 2 }));
-});
-
-const zoomOutElem = document.getElementById('zoomOutBtn')!;
-zoomOutElem.addEventListener('click', function () {
-	frequencyBarChart.updateOptions(opt => ({ scaleX: opt.scaleX * 2}));
-});
-
-const zoomResetElem = document.getElementById('zoomResetBtn')!;
-zoomResetElem.addEventListener('click', function () {
-	frequencyBarChart.setOptions({ scaleX: 1 });
-});
-
 filterControl.setup(
 	/*onActivate*/() => {
 		// add original data charts
-		waveformChart.link(originalWaveformChart);
-		frequencyBarChart.link(originalFreqBarChart);
+		waveformControl.chart.link(waveformControl.chartWithNoFilters);
+		frequencyControl.chart.link(frequencyControl.chartWithNoFilters);
 
 		// re-setup regular chart options
-		waveformChart.setOptions({ clearCanvas: false });
-		frequencyBarChart.setOptions({ drawLabels: false, clearCanvas: false });
+		waveformControl.chart.setOptions({ clearCanvas: false });
+		frequencyControl.chart.setOptions({ drawLabels: false, clearCanvas: false });
 	},
 	/*onDeactivate*/() => {
 		// remove original data charts
-		waveformChart.unlink(originalWaveformChart);
-		frequencyBarChart.unlink(originalFreqBarChart);
+		waveformControl.chart.unlink(waveformControl.chartWithNoFilters);
+		frequencyControl.chart.unlink(frequencyControl.chartWithNoFilters);
 
 		// re-setup regular chart options
-		waveformChart.setOptions({ clearCanvas: true });
-		frequencyBarChart.setOptions({ drawLabels: true, clearCanvas: true });
+		waveformControl.chart.setOptions({ clearCanvas: true });
+		frequencyControl.chart.setOptions({ drawLabels: true, clearCanvas: true });
 	}
 );
