@@ -3,7 +3,7 @@
 import { WaveformChart } from "./charts";
 import * as audioGraph from "./audioGraph";
 
-interface IWaveformChartControl {
+export interface IWaveformChartControl {
 	chart: WaveformChart;
 	chartWithNoFilters: WaveformChart;
 }

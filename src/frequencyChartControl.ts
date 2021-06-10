@@ -3,7 +3,7 @@
 import { FrequencyBarChart } from "./charts";
 import * as audioGraph from "./audioGraph";
 
-interface IFrequencyChartControl {
+export interface IFrequencyChartControl {
 	chart: FrequencyBarChart;
 	chartWithNoFilters: FrequencyBarChart;
 }

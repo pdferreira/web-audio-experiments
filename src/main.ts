@@ -1,11 +1,9 @@
 ///<amd-module name='main'/>
 
-import { IAnimatedChart } from "./charts";
 import * as audioGraph from "./audioGraph";
 import * as filterControl from "./filterControl";
 import * as playbackControl from "./playbackControl";
-import * as frequencyChartControl from "./frequencyChartControl";
-import * as waveformChartControl from "./waveformChartControl";
+import * as chartControl from "./chartControl";
 
 function bindAudioParamToInputById(param: AudioParam, inputId: string) {
 	const input = document.getElementById(inputId) as HTMLInputElement;
@@ -16,32 +14,9 @@ bindAudioParamToInputById(audioGraph.gainNodeL.gain, 'volumeL');
 bindAudioParamToInputById(audioGraph.gainNodeR.gain, 'volumeR');
 bindAudioParamToInputById(audioGraph.pannerNode.pan, 'panner');
 	
-const fftSizeElem = document.getElementById('fftSize') as HTMLInputElement;
-audioGraph.analyserNode.fftSize = parseInt(fftSizeElem.value);
-audioGraph.originalAnalyserNode.fftSize = audioGraph.analyserNode.fftSize;
+const { waveformControl, frequencyControl } = chartControl.setup();
 
-const frequencyControl = frequencyChartControl.setup();
-const waveformControl = waveformChartControl.setup();
-
-const charts: IAnimatedChart[] = [waveformControl.chart, frequencyControl.chart];
-
-playbackControl.setup(charts);
-
-fftSizeElem.addEventListener('change', function() {
-	var currFFTSize = parseInt(this.value);
-	const logBase2 = Math.log2(currFFTSize);
-	
-	if (audioGraph.analyserNode.fftSize < currFFTSize) {
-		audioGraph.analyserNode.fftSize = Math.pow(2, Math.ceil(logBase2));
-	} else {
-		audioGraph.analyserNode.fftSize = Math.pow(2, Math.floor(logBase2));
-	}
-	audioGraph.originalAnalyserNode.fftSize = audioGraph.analyserNode.fftSize;
-	
-	charts.forEach(chart => chart.reset());
-
-	this.value = audioGraph.analyserNode.fftSize.toString();
-});
+playbackControl.setup([waveformControl.chart, frequencyControl.chart]);
 
 filterControl.setup(
 	/*onActivate*/() => {
