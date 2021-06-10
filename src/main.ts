@@ -1,22 +1,15 @@
 ///<amd-module name='main'/>
 
-import * as audioGraph from "./audioGraph";
-import * as filterControl from "./filterControl";
 import * as playbackControl from "./playbackControl";
+import * as volumeControl from "./volumeControl";
+import * as filterControl from "./filterControl";
 import * as chartControl from "./chartControl";
-
-function bindAudioParamToInputById(param: AudioParam, inputId: string) {
-	const input = document.getElementById(inputId) as HTMLInputElement;
-	audioGraph.bindAudioParamToInput(param, input);
-}
-
-bindAudioParamToInputById(audioGraph.gainNodeL.gain, 'volumeL');
-bindAudioParamToInputById(audioGraph.gainNodeR.gain, 'volumeR');
-bindAudioParamToInputById(audioGraph.pannerNode.pan, 'panner');
 	
 const { waveformControl, frequencyControl } = chartControl.setup();
 
 playbackControl.setup([waveformControl.chart, frequencyControl.chart]);
+
+volumeControl.setup();
 
 filterControl.setup(
 	/*onActivate*/() => {
