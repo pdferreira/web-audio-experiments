@@ -28,8 +28,8 @@ mergeLRNode
 var track: MediaElementAudioSourceNode;
 
 export function setTrackAsSource(sourceAudioElem: HTMLAudioElement) {
-	if (audioContext.state == 'suspended') {
-		audioContext.resume();
+    if (audioContext.state == 'suspended') {
+        audioContext.resume();
     }
 
     if (track) {
@@ -52,7 +52,7 @@ export function unsetTrackSource() {
     track.disconnect(originalAnalyserNode);
     track.disconnect(splitNode);
 
-	pannerNode.disconnect(analyserNode);
+    pannerNode.disconnect(analyserNode);
 }
 
 // Applying filters
@@ -99,14 +99,14 @@ export async function toggleRecordingSource(): Promise<{ isRecording: boolean }>
 }
 
 export function bindAudioParamToInput(param: AudioParam, input: HTMLInputElement) {
-	// bind param to input
-	input.addEventListener('input', function() {
-		param.value = parseFloat(this.value);
-	}, false);
+    // bind param to input
+    input.addEventListener('input', function() {
+        param.value = parseFloat(this.value);
+    }, false);
 
-	// initialize with current input value if any
-	var initialValue = parseFloat(input.value);
-	if (!isNaN(initialValue)) {
-		param.value = initialValue;
-	}
+    // initialize with current input value if any
+    var initialValue = parseFloat(input.value);
+    if (!isNaN(initialValue)) {
+        param.value = initialValue;
+    }
 }
